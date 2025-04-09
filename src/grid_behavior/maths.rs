@@ -40,8 +40,20 @@ impl_maths!(Add, add, &|left, right| left.clone() + right.clone());
 impl_maths!(Sub, sub, &|left, right| left.clone() - right.clone());
 impl_maths!(Mul, mul, &|left, right| left.clone() * right.clone());
 impl_maths!(Div, div, &|left, right| left.clone() / right.clone());
-
 impl_maths_assign!(AddAssign, add_assign, &|left, right| *left += right);
 impl_maths_assign!(SubAssign, sub_assign, &|left, right| *left -= right);
 impl_maths_assign!(MulAssign, mul_assign, &|left, right| *left *= right);
 impl_maths_assign!(DivAssign, div_assign, &|left, right| *left /= right);
+
+
+
+impl_maths!(BitAnd, bitand, &|left, right| left.clone() & right.clone());
+impl_maths!(BitOr, bitor, &|left, right| left.clone() | right.clone());
+impl_maths!(BitXor, bitxor, &|left, right| left.clone() ^ right.clone());
+impl_maths!(Shl, shl, &|left, right| left.clone() << right.clone());
+impl_maths!(Shr, shr, &|left, right| left.clone() >> right.clone());
+impl_maths_assign!(BitAndAssign, bitand_assign, &|left, right| *left &= right.clone());
+impl_maths_assign!(BitOrAssign, bitor_assign, &|left, right| *left |= right.clone());
+impl_maths_assign!(BitXorAssign, bitxor_assign, &|left, right| *left ^= right.clone());
+impl_maths_assign!(ShlAssign, shl_assign, &|left, right| *left <<= right.clone());
+impl_maths_assign!(ShrAssign, shr_assign, &|left, right| *left >>= right.clone());
