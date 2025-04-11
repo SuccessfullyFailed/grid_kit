@@ -1,3 +1,7 @@
+use std::fmt::Debug;
+
+
+
 pub struct Grid<T> {
 	pub(crate) data:Vec<T>,
 	pub(crate) width:usize,
@@ -40,6 +44,11 @@ impl<T> Grid<T> {
 		&mut self.data
 	}
 
+	/// Get the data of the grid as rows.
+	pub fn data_2d(&self) -> Vec<&[T]> {
+		self.data.chunks(self.width).collect()
+	}
+
 	/// Get the width of the grid.
 	pub fn width(&self) -> usize {
 		self.width
@@ -63,5 +72,40 @@ impl<T> Grid<T> {
 impl<T> Default for Grid<T> {
 	fn default() -> Self {
 		Grid::empty()
+	}
+}
+impl<T> Clone for Grid<T> where T:Clone {
+	fn clone(&self) -> Self {
+		Grid {
+			data: self.data.clone(),
+			width: self.width,
+			height: self.height
+		}
+	}
+}
+impl<T> ToString for Grid<T> where T:ToString {
+	fn to_string(&self) -> String {
+		let values_as_string:Vec<Vec<String>> = self.data_2d().into_iter().map(|row| row.into_iter().map(|value| value.to_string()).collect::<Vec<String>>()).collect();
+		let field_size:usize = values_as_string.iter().flatten().map(|value| value.len()).min().unwrap_or_default();
+		values_as_string.into_iter().map(|row|
+			row.into_iter().map(|value_str| 
+				format!("[{}{}]", value_str, " ".repeat(field_size - value_str.len()))
+			).collect::<Vec<String>>().join(" ")
+		).collect::<Vec<String>>().join("\n")
+	}
+}
+impl<T> Debug for Grid<T> where T:Debug {
+	fn fmt(&self, f:&mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let values_as_string:Vec<Vec<String>> = self.data_2d().into_iter().map(|row| row.into_iter().map(|value| format!("{:?}", value)).collect::<Vec<String>>()).collect();
+		let field_size:usize = values_as_string.iter().flatten().map(|value| value.len()).min().unwrap_or_default();
+		write!(
+			f,
+			"{}",
+			values_as_string.into_iter().map(|row|
+				row.into_iter().map(|value_str| 
+					format!("[{}{}]", value_str, " ".repeat(field_size - value_str.len()))
+				).collect::<Vec<String>>().join(" ")
+			).collect::<Vec<String>>().join("\n")
+		)
 	}
 }
