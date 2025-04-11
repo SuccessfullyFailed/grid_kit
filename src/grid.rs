@@ -103,7 +103,7 @@ impl<T> PartialEq for Grid<T> where T:PartialEq {
 impl<T> ToString for Grid<T> where T:ToString {
 	fn to_string(&self) -> String {
 		let values_as_string:Vec<Vec<String>> = self.data_2d().into_iter().map(|row| row.into_iter().map(|value| value.to_string()).collect::<Vec<String>>()).collect();
-		let field_size:usize = values_as_string.iter().flatten().map(|value| value.len()).min().unwrap_or_default();
+		let field_size:usize = values_as_string.iter().flatten().map(|value| value.len()).max().unwrap_or_default();
 		values_as_string.into_iter().map(|row|
 			row.into_iter().map(|value_str| 
 				format!("[{}{}]", value_str, " ".repeat(field_size - value_str.len()))
@@ -114,7 +114,7 @@ impl<T> ToString for Grid<T> where T:ToString {
 impl<T> Debug for Grid<T> where T:Debug {
 	fn fmt(&self, f:&mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		let values_as_string:Vec<Vec<String>> = self.data_2d().into_iter().map(|row| row.into_iter().map(|value| format!("{:?}", value)).collect::<Vec<String>>()).collect();
-		let field_size:usize = values_as_string.iter().flatten().map(|value| value.len()).min().unwrap_or_default();
+		let field_size:usize = values_as_string.iter().flatten().map(|value| value.len()).max().unwrap_or_default();
 		write!(
 			f,
 			"{}",
