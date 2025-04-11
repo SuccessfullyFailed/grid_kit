@@ -30,6 +30,18 @@ impl<T> Grid<T> {
 		Grid::new(data.into_iter().flatten().collect(), width, height)
 	}
 
+	/// Create a checkers board.
+	#[cfg(test)]
+	pub fn checkers_board(tiles:usize, tile_size:usize, tile_a:T, tile_b:T) -> Grid<T> where T:Clone {
+		let even_row:Vec<T> = (0..tiles).map(|tile_index| vec![if tile_index % 2 == 0 { tile_a.clone() } else { tile_b.clone() }; tile_size]).flatten().collect();
+		let odd_row:Vec<T> = (0..tiles).map(|tile_index| vec![if tile_index % 2 == 0 { tile_b.clone() } else { tile_a.clone() }; tile_size]).flatten().collect();
+		Grid::new_2d(
+			(0..tiles).map(|tile_row| vec![if tile_row % 2 == 0 { even_row.clone() } else { odd_row.clone() }; tile_size]).flatten().collect::<Vec<Vec<T>>>(),
+			tiles * tile_size,
+			tiles * tile_size
+		)
+	}
+
 
 
 	/* GETTER METHODS */
@@ -81,6 +93,11 @@ impl<T> Clone for Grid<T> where T:Clone {
 			width: self.width,
 			height: self.height
 		}
+	}
+}
+impl<T> PartialEq for Grid<T> where T:PartialEq {
+	fn eq(&self, other:&Self) -> bool {
+		self.data == other.data
 	}
 }
 impl<T> ToString for Grid<T> where T:ToString {
