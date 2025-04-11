@@ -21,6 +21,11 @@ impl<T> Grid<T> {
 		}
 	}
 
+	/// Create a new grid with some data from a two-dimensional array.
+	pub fn new_2d(data:Vec<Vec<T>>, width:usize, height:usize) -> Grid<T> {
+		Grid::new(data.into_iter().flatten().collect(), width, height)
+	}
+
 
 
 	/* GETTER METHODS */
