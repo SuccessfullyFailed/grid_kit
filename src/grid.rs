@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::fmt::{ Debug, Display };
 
 
 
@@ -100,20 +100,24 @@ impl<T> PartialEq for Grid<T> where T:PartialEq {
 		self.data == other.data
 	}
 }
-impl<T> ToString for Grid<T> where T:ToString {
-	fn to_string(&self) -> String {
-		let values_as_string:Vec<Vec<String>> = self.data_2d().into_iter().map(|row| row.into_iter().map(|value| value.to_string()).collect::<Vec<String>>()).collect();
+impl<T> Display for Grid<T> where T:ToString {
+	fn fmt(&self, f:&mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let values_as_string:Vec<Vec<String>> = self.data_2d().into_iter().map(|row| row.iter().map(|value| value.to_string()).collect::<Vec<String>>()).collect();
 		let field_size:usize = values_as_string.iter().flatten().map(|value| value.len()).max().unwrap_or_default();
-		values_as_string.into_iter().map(|row|
-			row.into_iter().map(|value_str| 
-				format!("[{}{}]", value_str, " ".repeat(field_size - value_str.len()))
-			).collect::<Vec<String>>().join(" ")
-		).collect::<Vec<String>>().join("\n")
+		write!(
+			f,
+			"{}",
+			values_as_string.into_iter().map(|row|
+				row.into_iter().map(|value_str| 
+					format!("[{}{}]", value_str, " ".repeat(field_size - value_str.len()))
+				).collect::<Vec<String>>().join(" ")
+			).collect::<Vec<String>>().join("\n")
+		)
 	}
 }
 impl<T> Debug for Grid<T> where T:Debug {
 	fn fmt(&self, f:&mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		let values_as_string:Vec<Vec<String>> = self.data_2d().into_iter().map(|row| row.into_iter().map(|value| format!("{:?}", value)).collect::<Vec<String>>()).collect();
+		let values_as_string:Vec<Vec<String>> = self.data_2d().into_iter().map(|row| row.iter().map(|value| format!("{:?}", value)).collect::<Vec<String>>()).collect();
 		let field_size:usize = values_as_string.iter().flatten().map(|value| value.len()).max().unwrap_or_default();
 		write!(
 			f,

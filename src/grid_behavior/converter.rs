@@ -9,7 +9,7 @@ impl<T> Grid<T> {
 		let width:usize = self.width;
 		let height:usize = self.height;
 		Grid {
-			data: self.into_iter().map(|value| conversion_function(value)).collect(),
+			data: self.into_iter().map(conversion_function).collect(),
 			width,
 			height
 		}

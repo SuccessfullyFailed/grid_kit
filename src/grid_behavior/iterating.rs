@@ -5,23 +5,8 @@ use crate::Grid;
 
 impl<T> Grid<T> {
 
-	/// Iterate over the data in the grid.
-	pub fn iter(&self) -> Iter<'_, T> {
-		self.data.iter()
-	}
-
-	/// Iterate over the mutable data in the grid.
-	pub fn iter_mut(&mut self) -> IterMut<'_, T> {
-		self.data.iter_mut()
-	}
-
-	/// Consume self into an iterater over the data in the grid.
-	pub fn into_iter(self) -> IntoIter<T> {
-		self.data.into_iter()
-	}
-
 	/// Iterate over pixels with their according X and Y coordinate.
-	pub fn pixel_iterator<'a>(&'a self) -> PixelIterator<'a, T> {
+	pub fn pixel_iterator(&self) -> PixelIterator<T> {
 		PixelIterator {
 			grid: self,
 			grid_len: self.data.len(),
@@ -34,13 +19,37 @@ impl<T> Grid<T> {
 impl<T> Grid<T> where Grid<T>:Sized {
 
 	/// Iterate over mutable pixels with their according X and Y coordinate.
-	pub fn pixel_iterator_mut<'a>(&'a mut self) -> PixelIteratorMut<'a, T> {
+	pub fn pixel_iterator_mut(&mut self) -> PixelIteratorMut<T> {
 		PixelIteratorMut {
 			grid: self,
 			x: 0,
 			y: 0,
 			index: 0
 		}
+	}
+}
+impl<T> IntoIterator for Grid<T> {
+	type Item = T;
+	type IntoIter = IntoIter<T>;
+    
+	fn into_iter(self) -> Self::IntoIter {
+	    self.data.into_iter()
+	}
+}
+impl<'a, T> IntoIterator for &'a Grid<T> {
+	type Item = &'a T;
+	type IntoIter = Iter<'a, T>;
+
+	fn into_iter(self) -> Self::IntoIter {
+		self.data.iter()
+	}
+}
+impl<'a, T> IntoIterator for &'a mut Grid<T> {
+	type Item = &'a mut T;
+	type IntoIter = IterMut<'a, T>;
+
+	fn into_iter(self) -> Self::IntoIter {
+		self.data.iter_mut()
 	}
 }
 
@@ -80,7 +89,7 @@ pub struct PixelIteratorMut<'a, T> {
 	y:usize,
 	index:usize
 }
-impl<'a, 'b, T> Iterator for PixelIteratorMut<'a, T> {
+impl<'a, T> Iterator for PixelIteratorMut<'a, T> {
 	type Item = (usize, usize, &'a mut T);
 	
 	fn next(&mut self) -> Option<Self::Item> {

@@ -12,11 +12,11 @@ mod tests {
 		assign_operation(&mut result_assign, modifier.clone());
 		println!("{:?}\n{}\n{:?}\n=\n{:?}\n&&\n{:?}\n", grid, operation_print, modifier, result, result_assign);
 
-		for (index, (item, item_assign)) in result.iter().zip(result_assign.iter()).enumerate() {
+		for (index, (item, item_assign)) in result.into_iter().zip(result_assign).enumerate() {
 			let expected:i32 =  validation_operation((index as i32 + 1) * 10, (index as i32 + 1) * 2);
 			println!("{index}:\t{item} && {item_assign}\t\t(should be {expected})");
-			assert_eq!(*item, expected);
-			assert_eq!(*item_assign, expected);
+			assert_eq!(item, expected);
+			assert_eq!(item_assign, expected);
 		}
 	}
 

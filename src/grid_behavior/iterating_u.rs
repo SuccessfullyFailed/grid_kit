@@ -9,9 +9,9 @@ mod tests {
 		let grid:Grid<usize> = Grid::new((0..9).collect(), 3, 3);
 		println!("{:?}", grid);
 
-		for (index, item) in grid.iter().enumerate() {
+		for (index, item) in grid.into_iter().enumerate() {
 			println!("{index}: {item}");
-			assert_eq!(index, *item);
+			assert_eq!(index, item);
 		}
 	}
 
@@ -20,7 +20,7 @@ mod tests {
 		let mut grid:Grid<usize> = Grid::new((0..9).collect(), 3, 3);
 		println!("{:?}", grid);
 
-		for entry in grid.iter_mut() {
+		for entry in &mut grid {
 			*entry *= 2;
 		}
 		println!("{:?}", grid);
