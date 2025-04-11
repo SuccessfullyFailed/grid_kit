@@ -16,46 +16,54 @@ impl<T> Grid<T> {
 		[x, (index - x) / self.width]
 	}
 
-	/// Wether or not and X and Y coordinate are valid in the grid.
+	/// Wether or not the given index is valid in the grid.
+	pub fn index_is_valid(&self, index:usize) -> bool {
+		index < self.len()
+	}
+
+	/// Wether or not the given and X and Y coordinate are valid in the grid.
 	pub fn xy_is_valid(&self, x:usize, y:usize) -> bool {
 		x < self.width && y < self.height
 	}
 }
-impl<T> Index<usize> for Grid<T> {
+impl<T, U> Index<U> for Grid<T> where U:GridIndexer {
 	type Output = T;
 
-	fn index(&self, index:usize) -> &Self::Output {
-		&self.data[index]
+	fn index(&self, indexer:U) -> &Self::Output {
+		&self.data[indexer.to_grid_index(self)]
 	}
 }
-impl<T> IndexMut<usize> for Grid<T> {
-	fn index_mut(&mut self, index:usize) -> &mut Self::Output {
+impl<T, U> IndexMut<U> for Grid<T> where U:GridIndexer {
+	fn index_mut(&mut self, indexer:U) -> &mut Self::Output {
+		let index:usize = indexer.to_grid_index(self);
 		&mut self.data[index]
 	}
 }
-impl<T> Index<[usize; 2]> for Grid<T> {
-	type Output = T;
 
-	fn index(&self, coordinate:[usize; 2]) -> &Self::Output {
-		&self.data[self.xy_to_index(coordinate[0], coordinate[1])]
-	}
-}
-impl<T> IndexMut<[usize; 2]> for Grid<T> {
-	fn index_mut(&mut self, coordinate:[usize; 2]) -> &mut Self::Output {
-		let index:usize = self.xy_to_index(coordinate[0], coordinate[1]);
-		&mut self.data[index]
-	}
-}
-impl<T> Index<(usize, usize)> for Grid<T> {
-	type Output = T;
 
-	fn index(&self, coordinate:(usize, usize)) -> &Self::Output {
-		&self.data[self.xy_to_index(coordinate.0, coordinate.1)]
+pub trait GridIndexer {
+
+	/// Convert the indexer to an actual index.
+	fn to_grid_index<T>(&self, grid:&Grid<T>) -> usize;
+
+	/// Convert the index to a X and Y coordinate on the grid.
+	fn to_grid_xy<T>(&self, grid:&Grid<T>) -> (usize, usize) {
+		let index:usize = self.to_grid_index(grid);
+		(index % grid.width, index / grid.width)
 	}
 }
-impl<T> IndexMut<(usize, usize)> for Grid<T> {
-	fn index_mut(&mut self, coordinate:(usize, usize)) -> &mut Self::Output {
-		let index:usize = self.xy_to_index(coordinate.0, coordinate.1);
-		&mut self.data[index]
+impl GridIndexer for usize {
+	fn to_grid_index<T>(&self, _grid:&Grid<T>) -> usize {
+		*self
+	}
+}
+impl GridIndexer for [usize; 2] {
+	fn to_grid_index<T>(&self, grid:&Grid<T>) -> usize {
+		self[1] * grid.width + self[0]
+	}
+}
+impl GridIndexer for (usize, usize) {
+	fn to_grid_index<T>(&self, grid:&Grid<T>) -> usize {
+		self.1 * grid.width + self.0
 	}
 }
