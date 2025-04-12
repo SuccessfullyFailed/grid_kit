@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use crate::{ Grid, GridIndexer, Mask };
 
 
@@ -8,7 +6,7 @@ pub type RegionMask = Mask;
 
 
 
-impl<T> Grid<T> where T:PartialEq + Display {
+impl<T> Grid<T> where T:PartialEq {
 	
 	/// Starting at the selected pixel, create a list of all attached pixels that are the same.
 	pub fn region_at<U, V>(&self, start:U, comparing_function:V) -> RegionMask where U:GridIndexer, V:Fn(&T, &T) -> bool {
@@ -16,11 +14,12 @@ impl<T> Grid<T> where T:PartialEq + Display {
 		let x_last_index:usize = self.len() - 1;
 		let y_last_index:usize = self.len() - self.width;
 		
-		let mut queue:Vec<(usize, &T)> = vec![(start_index, &self[start_index])];
+		let mut queue:Vec<(usize, &T)> = vec![(start_index, &self[start_index])]; // Items are not removed from queue, so it can grow to the maximum size of grid.len() * 4, but guarantees no pixel is parsed the same twice. This also prevents any posibility infinite loops.
+		let mut queue_cursor:usize = 0;
 		let mut region_mask:Grid<bool> = Grid::new(vec![false; self.len()], self.width, self.height);
 		
-		while !queue.is_empty() {
-			let (current_index, source_value) = queue.pop().unwrap();
+		while queue_cursor < queue.len() {
+			let (current_index, source_value) = queue[queue_cursor];
 
 			// Skip done and invalid cursors.
 			if region_mask[current_index] || !self.index_is_valid(current_index) {
@@ -45,6 +44,8 @@ impl<T> Grid<T> where T:PartialEq + Display {
 					}
 				}
 			}
+
+			queue_cursor += 1;
 		}
 		
 		region_mask
