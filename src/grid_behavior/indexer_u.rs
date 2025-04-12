@@ -10,7 +10,7 @@ mod tests {
 			10,
 			10
 		);
-		println!("{:?}", grid);
+		println!("[grid]{:?}\n", grid);
 
 		for y in 0..10 {
 			for x in 0..10 {

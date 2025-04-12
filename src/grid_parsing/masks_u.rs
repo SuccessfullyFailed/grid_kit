@@ -7,9 +7,9 @@ mod tests {
 	#[test]
 	fn test_create_basic_mask() {
 		let grid:Grid<usize> = Grid::new((0..9).collect(), 3, 3);
-		println!("{:?}", grid);
+		println!("[grid]\n{grid}\n");
 		let mask:Mask = grid.create_mask(|value| value % 3 == 1);
-		println!("{:?}", mask);
+		println!("[mask]\n{mask}\n");
 
 		assert_eq!(mask.data, vec![false, true, false, false, true, false, false, true, false]);
 	}
@@ -17,9 +17,9 @@ mod tests {
 	#[test]
 	fn test_create_value_mask() {
 		let grid:Grid<usize> = Grid::new((0..9).collect(), 3, 3);
-		println!("{:?}", grid);
+		println!("[grid]\n{grid}\n");
 		let mask:Mask = grid.create_value_mask(3);
-		println!("{:?}", mask);
+		println!("[mask]\n{mask}\n");
 
 		assert_eq!(mask.data, vec![false, false, false, true, false, false, false, false, false]);
 	}
@@ -27,11 +27,11 @@ mod tests {
 	#[test]
 	fn test_apply_mask() {
 		let mut grid:Grid<usize> = Grid::new((0..9).collect(), 3, 3);
-		println!("{:?}\n", grid);
+		println!("[grid before mask]\n{grid}\n");
 		let mask:Mask = grid.create_mask(|value| *value >= 5);
-		println!("{:?}\n", mask);
+		println!("[mask]\n{mask}\n");
 		grid.apply_mask(&mask);
-		println!("{:?}\n", grid);
+		println!("[grid after mask]\n{grid}\n");
 
 		assert_eq!(grid.data, vec![0, 0, 0, 0, 0, 5, 6, 7, 8]);
 	}
@@ -39,9 +39,9 @@ mod tests {
 	#[test]
 	fn test_create_and_apply_mask() {
 		let mut grid:Grid<usize> = Grid::new((0..9).collect(), 3, 3);
-		println!("{:?}\n", grid);
+		println!("[grid before mask]\n{grid}\n");
 		grid.mask(|value| *value >= 5);
-		println!("{:?}\n", grid);
+		println!("[grid after mask]\n{grid}\n");
 
 		assert_eq!(grid.data, vec![0, 0, 0, 0, 0, 5, 6, 7, 8]);
 	}

@@ -10,7 +10,12 @@ mod tests {
 		let result:Grid<i32> = operation(grid.clone(), modifier.clone());
 		let mut result_assign:Grid<i32> = grid.clone();
 		assign_operation(&mut result_assign, modifier.clone());
-		println!("{:?}\n{}\n{:?}\n=\n{:?}\n&&\n{:?}\n", grid, operation_print, modifier, result, result_assign);
+		println!("[grid]\n{grid}\n");
+		println!("{operation_print}\n");
+		println!("[modifier]\n{modifier}\n");
+		println!("=>\n");
+		println!("[result]\n{result}\n");
+		println!("[result assign]\n{result_assign}\n");
 
 		for (index, (item, item_assign)) in result.into_iter().zip(result_assign).enumerate() {
 			let expected:i32 =  validation_operation((index as i32 + 1) * 10, (index as i32 + 1) * 2);

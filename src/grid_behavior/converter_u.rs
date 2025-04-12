@@ -6,9 +6,9 @@ mod tests {
 	#[test]
 	fn test_conversion() {
 		let int_grid:Grid<i32> = Grid::new((0..10).collect(), 10, 10);
-		println!("{:?}", int_grid);
+		println!("[int grid]\n{int_grid}\n");
 		let float_grid:Grid<f32> = int_grid.clone().map(|int| int as f32 / 2.0);
-		println!("{:?}", float_grid);
+		println!("[float grid]\n{float_grid}\n");
 
 		assert_eq!([int_grid.width, int_grid.height], [float_grid.width, float_grid.height]);
 		assert_eq!(int_grid.data(), &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);

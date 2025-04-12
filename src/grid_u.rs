@@ -7,7 +7,7 @@ mod tests {
 	#[test]
 	fn test_grid_properties() {
 		let grid:Grid<char> = Grid::new(vec!['x', 'x', 'x', ' ', ' ', ' ', '1', '2', '3'], 3, 3);
-		println!("{}", grid.to_string());
+		println!("[grid]\n{grid}\n");
 		
 		assert_eq!([grid.width, grid.height], [3; 2]);
 		assert_eq!([grid.width(), grid.height()], [3; 2]);
@@ -20,7 +20,7 @@ mod tests {
 	#[test]
 	fn test_checkers_board() {
 		let grid:Grid<char> = Grid::<char>::checkers_board(9, 3, 'x', ' ');
-		println!("{}", grid.to_string());
+		println!("[grid]\n{grid}\n");
 
 		assert_eq!([grid.width, grid.height], [9 * 3; 2]);
 		assert_eq!(grid.data_2d()[0], ['x', 'x', 'x', ' ', ' ', ' ', 'x', 'x', 'x', ' ', ' ', ' ', 'x', 'x', 'x', ' ', ' ', ' ', 'x', 'x', 'x', ' ', ' ', ' ', 'x', 'x', 'x']);
