@@ -5,6 +5,11 @@ use crate::Grid;
 
 impl<T> Grid<T> {
 
+	/// Create a simple slice iterator.
+	pub fn iter(&self) -> std::slice::Iter<T> {
+		self.data.iter()
+	}
+
 	/// Iterate over pixels with their according X and Y coordinate.
 	pub fn pixel_iterator(&self) -> PixelIterator<T> {
 		PixelIterator {
