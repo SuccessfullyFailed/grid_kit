@@ -25,6 +25,17 @@ mod test {
 	}
 
 	#[test]
+	fn test_similarity_greater_than() {
+		let grid:Grid<i32> = Grid::new(vec![0, 1, 2, 3, 4, 5, 6, 7, 8], 3, 3);
+		println!("[grid]\n{grid}\n");
+		let compare_grid:Grid<i32> = Grid::new(vec![0, 1, 2, 4, 4, 5, 6, 7, 8], 3, 3);
+		println!("[compare grid]\n{compare_grid}\n");
+		
+		assert!(!grid.similarity_to_greater_than(&compare_grid, 1.0));
+		assert!(grid.similarity_to_greater_than(&compare_grid, 1.0 / 9.0 * 8.0));
+	}
+
+	#[test]
 	fn test_similarity_differently_sized() {
 		let grid:Grid<i32> = Grid::new(vec![0, 1, 2, 3, 4, 5, 6, 7, 8], 3, 3);
 		println!("[grid]\n{grid}\n");

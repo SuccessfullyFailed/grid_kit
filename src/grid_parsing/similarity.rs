@@ -27,11 +27,34 @@ impl<T> Grid<T> {
 		}
 		1.0 / (self.width * self.height) as f32 * self.data.iter().zip(&other.data).filter(|(a, b)| comparing_method(a, b)).count() as f32
 	}
+
+	/// Wether or not the similarity between this grid and another is greater than the given amount. If grids aren't the same size, prints warning and returns default value.
+	pub fn similarity_to_greater_than_using_method(&self, other:&Grid<T>, minimum_similarity:f32, comparing_method:CompareEqualMethod<T>) -> bool {
+		if let Some(invalidation_value) = self.validate_equal_size(other) {
+			return invalidation_value > minimum_similarity;
+		}
+		let maximum_allowed_mismatches:usize = ((self.width * self.height) as f32 * (1.0 - minimum_similarity)).round() as usize;
+		let mut mismatches:usize = 0;
+		for (a, b) in self.data.iter().zip(&other.data) {
+			if !comparing_method(a, b) {
+				mismatches += 1;
+				if mismatches > maximum_allowed_mismatches {
+					return false;
+				}
+			}
+		}
+		true
+	}
 }
 impl<T> Grid<T> where T:PartialEq + 'static {
 
 	/// Get the factor of the similarity between this grid and another. If grids aren't the same size, prints warning and returns default value.
 	pub fn similarity_to(&self, other:&Grid<T>) -> f32 {
 		self.similarity_to_using_method(other, &|a, b| a == b)
+	}
+
+	/// Wether or not the similarity between this grid and another is greater than the given amount. If grids aren't the same size, prints warning and returns default value.
+	pub fn similarity_to_greater_than(&self, other:&Grid<T>, minimum_similarity:f32) -> bool {
+		self.similarity_to_greater_than_using_method(other, minimum_similarity, &|a, b| a == b)
 	}
 }
