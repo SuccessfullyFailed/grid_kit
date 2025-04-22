@@ -1,8 +1,8 @@
-use crate::{ Grid, GridIndexer, Mask };
+use crate::{ Grid, GridIndexer };
 
 
 
-pub type RegionMask = Mask;
+pub type RegionMask = Grid<bool>;
 
 
 

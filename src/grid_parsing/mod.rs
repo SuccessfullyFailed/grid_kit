@@ -5,5 +5,5 @@ mod region_u;
 mod similarity;
 mod similarity_u;
 
-pub use masks::Mask;
+pub use masks::GridMask;
 pub use region::RegionMask;
