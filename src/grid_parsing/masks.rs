@@ -102,6 +102,13 @@ impl<T, U> Maskable for (Grid<T>, U) where T:PartialEq + 'static, U:Fn(&T) -> bo
 
 
 
+impl<T> Grid<T> {
+
+	/// Return the data of self filtered by the mask.
+	pub(crate) fn masked_data(&self, mask:&GridMask) -> Vec<&T> {
+		mask.positive_ranges.iter().map(|range| &self.data[range.clone()]).flatten().collect()
+	}
+}
 impl<T> Grid<T> where T:PartialEq + 'static {
 
 	/// Create a mask based on which values pass the given function.
@@ -117,14 +124,22 @@ impl<T> Grid<T> where T:PartialEq + 'static {
 impl<T> Grid<T> where T:Default {
 	
 	/// Apply a mask to self that sets all mismatches to default value.
-	pub fn apply_mask<U>(&mut self, maskable:U) where U:Maskable {
-		let mask:GridMask = maskable.as_mask();
+	pub fn apply_mask(&mut self, mask:&GridMask) {
 		assert_eq!([self.width, self.height], [mask.source_grid.width, mask.source_grid.height], "Mask application requires grid and mask to be the same size");
-		for range in mask.negative_ranges {
-			for index in range {
+		for range in &mask.negative_ranges {
+			for index in range.clone() {
 				self[index] = T::default();
 			}
 		}
+	}
+}
+impl<T> Grid<T> where T:Default + Clone {
+	
+	/// Return a version of self masked by the given mask.
+	pub fn masked(&self, mask:&GridMask) -> Self {
+		let mut clone:Grid<T> = self.clone();
+		clone.apply_mask(mask);
+		clone
 	}
 }
 impl<T> Grid<T> where T:Default + PartialEq + 'static {

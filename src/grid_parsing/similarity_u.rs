@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod test {
-	use crate::Grid;
+	use crate::{grid_parsing::similarity::SimilaritySettings, Grid};
 
 
 
@@ -11,7 +11,7 @@ mod test {
 		let compare_grid:Grid<i32> = Grid::new(vec![0, 1, 2, 3, 4, 5, 6, 7, 9], 3, 3);
 		println!("[compare grid]\n{compare_grid}\n");
 		
-		assert_eq!(1.0 / 9.0 * 8.0, grid.similarity_to(&compare_grid));
+		assert_eq!(1.0 / 9.0 * 8.0, grid.similarity_to(&compare_grid, &SimilaritySettings::default()));
 	}
 
 	#[test]
@@ -21,7 +21,7 @@ mod test {
 		let compare_grid:Grid<i32> = Grid::new(vec![0, 2, 3, 1, 5, 6, 7, 8, 10], 3, 3);
 		println!("[compare grid]\n{compare_grid}\n");
 		
-		assert_eq!(1.0 / 9.0 * 7.0, grid.similarity_to_using_method(&compare_grid, &|a, b| a.max(b) - a.min(b) < 2));
+		assert_eq!(1.0 / 9.0 * 7.0, grid.similarity_to(&compare_grid, &SimilaritySettings::new(&|a, b| a.max(b) - a.min(b) < 2)));
 	}
 
 	#[test]
@@ -31,8 +31,8 @@ mod test {
 		let compare_grid:Grid<i32> = Grid::new(vec![0, 1, 2, 4, 4, 5, 6, 7, 8], 3, 3);
 		println!("[compare grid]\n{compare_grid}\n");
 		
-		assert!(!grid.similarity_to_greater_than(&compare_grid, 1.0));
-		assert!(grid.similarity_to_greater_than(&compare_grid, 1.0 / 9.0 * 8.0));
+		assert_eq!(grid.similarity_to(&compare_grid, &SimilaritySettings::default().with_minimum_similarity(1.0)), 0.0);
+		assert_eq!(grid.similarity_to(&compare_grid, &SimilaritySettings::default().with_minimum_similarity(1.0 / 9.0 * 8.0)), 1.0);
 	}
 
 	#[test]
@@ -42,6 +42,6 @@ mod test {
 		let compare_grid:Grid<i32> = Grid::new(vec![0, 1, 2, 3, 4, 5, 6, 7], 3, 3);
 		println!("[compare grid]\n{compare_grid}\n");
 		
-		assert_eq!(0.0, grid.similarity_to(&compare_grid));
+		assert_eq!(grid.similarity_to(&compare_grid, &SimilaritySettings::default()), 0.0);
 	}
 }

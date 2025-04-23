@@ -33,7 +33,7 @@ mod tests {
 		let mask:GridMask = grid.create_mask(|value| *value >= 5);
 		let mask_grid:&Grid<bool> = mask.grid();
 		println!("[mask]\n{mask_grid}\n");
-		grid.apply_mask(mask);
+		grid.apply_mask(&mask);
 		println!("[grid after mask]\n{grid}\n");
 
 		assert_eq!(grid.data, vec![0, 0, 0, 0, 0, 5, 6, 7, 8]);
