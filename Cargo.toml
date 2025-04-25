@@ -4,4 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-file_ref={ git="https://github.com/SuccessfullyFailed/file_ref" }
+file_ref={ git="https://github.com/SuccessfullyFailed/file_ref", optional=true }
+
+[features]
+file_storage=["dep:file_ref"]
