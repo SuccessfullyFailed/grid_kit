@@ -8,4 +8,4 @@ mod sub_grid;
 mod sub_grid_u;
 
 pub use masks::GridMask;
-pub use region::RegionMask;
+pub use region::GridRegion;
