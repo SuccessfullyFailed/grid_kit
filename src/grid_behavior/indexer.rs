@@ -1,4 +1,4 @@
-use std::ops::{ Index, IndexMut };
+use std::ops::{ Index, IndexMut, Range };
 use crate::Grid;
 
 
@@ -37,6 +37,20 @@ impl<T, U> IndexMut<U> for Grid<T> where U:GridIndexer {
 	fn index_mut(&mut self, indexer:U) -> &mut Self::Output {
 		let index:usize = indexer.to_grid_index(self);
 		&mut self.data[index]
+	}
+}
+impl<T, U> Index<Range<U>> for Grid<T> where U:GridIndexer {
+	type Output = [T];
+
+	fn index(&self, indexer:Range<U>) -> &Self::Output {
+		&self.data[indexer.start.to_grid_index(self)..indexer.end.to_grid_index(self)]
+	}
+}
+impl<T, U> IndexMut<Range<U>> for Grid<T> where U:GridIndexer {
+	fn index_mut(&mut self, indexer:Range<U>) -> &mut Self::Output {
+		let start_index:usize = indexer.start.to_grid_index(self);
+		let end_index:usize = indexer.end.to_grid_index(self);
+		&mut self.data[start_index..end_index]
 	}
 }
 

@@ -1,6 +1,12 @@
-use std::{fmt::Display, ops::{Index, IndexMut}};
-
+use std::{ fmt::Display, ops::{ Index, IndexMut, Range } };
 use crate::{ Grid, GridIndexer };
+
+
+
+struct EdgeIndex {
+	positive_index:usize,
+	negative_index:Option<usize>
+}
 
 
 
@@ -68,55 +74,75 @@ impl GridRegion {
 
 	/// Remove a specific width of edges.
 	pub fn remove_edge(&mut self, removal_width:usize) {
-		
-		// Remove one layer for each removal width.
 		for _ in 0..removal_width {
-			let mut edge_indexes:Vec<usize> = Vec::new();
-		
-			// Find all changes in positive and negative from left to right.
-			if self.bounds[2] > 0 {
-				for y in self.bounds[1]..self.bounds[1] + self.bounds[3] {
-					let start_index:usize = y * self.grid.width + self.bounds[0];
-					let end_index:usize = start_index + self.bounds[2];
-					let mut previous_value:bool = false;
-					for cursor in start_index..end_index {
-						if self[cursor] != previous_value {
-							edge_indexes.push(if previous_value { cursor - 1 } else { cursor });
-							previous_value = self[cursor];
-						}
-					}
-					if previous_value {
-						edge_indexes.push(end_index - 1);
-					}
-				}
-			}
-		
-			// Find all changes in positive and negative from left to right.
-			if self.bounds[3] > 0 {
-				for x in self.bounds[0]..self.bounds[0] + self.bounds[2] {
-					let start_index:usize = self.bounds[1] * self.grid.width + x;
-					let end_index:usize = (self.bounds[1] + self.bounds[3]) * self.grid.width + x;//start_index + self.bounds[3] * self.grid.width;
-					let mut previous_value:bool = false;
-					for cursor in (start_index..end_index).step_by(self.grid.width) {
-						if self[cursor] != previous_value {
-							edge_indexes.push(if previous_value { cursor - self.grid.width } else { cursor });
-							previous_value = self[cursor];
-						}
-					}
-					if previous_value {
-						edge_indexes.push(end_index - self.grid.width);
-					}
-				}
-			}
-
-			// Remove found edge coordinates.
-			for edge_index in edge_indexes {
+			for edge_index in self.find_edges().into_iter().map(|edge| edge.positive_index) {
 				self[edge_index] = false;
 			}
 		}
-
-		// Update bounds.
 		self.update_bounds();
+	}
+
+	/// Find the edges of the region.
+	fn find_edges(&self) -> Vec<EdgeIndex> {
+		let mut edges:Vec<EdgeIndex> = Vec::with_capacity(self.grid.width * self.grid.height);
+		if self.bounds[2] == 0 || self.bounds[3] == 0 {
+			return edges;
+		}
+
+		// First and last rows and columns.
+		for y in [self.bounds[1], self.bounds[1] + self.bounds[3] - 1] {
+			for x in self.bounds[0]..self.bounds[0] + self.bounds[2] {
+				let index:usize = y * self.grid.width + x;
+				if self[index] {
+					edges.push(EdgeIndex { positive_index: index, negative_index: None })
+				}
+			}
+		}
+		for y in self.bounds[1]..self.bounds[1] + self.bounds[3] {
+			for x in [self.bounds[0], self.bounds[0] + self.bounds[2] - 1] {
+				let index:usize = y * self.grid.width + x;
+				if self[index] {
+					edges.push(EdgeIndex { positive_index: index, negative_index: None });
+				}
+			}
+		}
+
+		// Center rows and columns.
+		let mut last_value_y:Vec<bool> = self.grid[0..self.bounds[0] + self.bounds[2]].to_vec();
+		for y in self.bounds[1] + 1..self.bounds[1] + self.bounds[3] {
+			let y_start_index:usize = y * self.grid.width;
+			let mut last_value_x:bool = self[y_start_index + self.bounds[0]];
+			for x in self.bounds[0] + 1..self.bounds[0] + self.bounds[2] {
+				let index:usize = y_start_index + x;
+				let value:bool = self[index];
+				if value != last_value_x {
+					let (positive, negative) = if value { (index, index - 1) } else { (index - 1, index) };
+					edges.push(EdgeIndex { positive_index: positive, negative_index: Some(negative) });
+					last_value_x = value;
+				}
+				if value != last_value_y[x] {
+					let (positive, negative) = if value { (index, index - self.grid.width) } else { (index - self.grid.width, index) };
+					edges.push(EdgeIndex { positive_index: positive, negative_index: Some(negative) });
+					last_value_y[x] = value;
+				}
+			}
+		}
+
+		// Trailing rows and columns.
+		for x in self.bounds[0]..self.bounds[0] + self.bounds[2] {
+			if self[x] {
+				edges.push(EdgeIndex { positive_index: x, negative_index: None })
+			}
+		}
+		for y in self.bounds[1]..self.bounds[1] + self.bounds[3] {
+			let index:usize = y * self.grid.width;
+			if self[index] {
+				edges.push(EdgeIndex { positive_index: index, negative_index: None });
+			}
+		}
+
+		// Return edges.
+		edges
 	}
 
 
@@ -137,6 +163,18 @@ impl<U> Index<U> for GridRegion where U:GridIndexer {
 }
 impl<U> IndexMut<U> for GridRegion where U:GridIndexer {
 	fn index_mut(&mut self, index:U) -> &mut Self::Output {
+		&mut self.grid[index]
+	}
+}
+impl<U> Index<Range<U>> for GridRegion where U:GridIndexer {
+	type Output = [bool];
+
+	fn index(&self, index:Range<U>) -> &Self::Output {
+		&self.grid[index]
+	}
+}
+impl<U> IndexMut<Range<U>> for GridRegion where U:GridIndexer {
+	fn index_mut(&mut self, index:Range<U>) -> &mut Self::Output {
 		&mut self.grid[index]
 	}
 }

@@ -30,7 +30,7 @@ mod test {
 		println!("[grid]\n{grid}\n");
 		let mut region:GridRegion = grid.region_at_eq([2, 2]);
 		region.remove_edge(1);
-		println!("[region]\n{}\n", region.grid());
+		println!("[region]\n{}\n", region.grid().map_ref(|value| if *value { 'x' } else { ' ' }));
 		
 		assert_eq!(&region.grid().data, &[' ', ' ', ' ', ' ', ' ', 	' ', ' ', ' ', ' ', ' ', 	' ', ' ', 'x', ' ', ' ', 	' ', ' ', 'x', ' ', ' ', 	' ', ' ', ' ', ' ', ' '].map(|c| c == 'x'));
 	}
@@ -41,7 +41,7 @@ mod test {
 		println!("[grid]\n{grid}\n");
 		let mut region:GridRegion = grid.region_at_eq([12, 12]);
 		region.remove_edge(5);
-		println!("[region]\n{}\n", region.grid());
+		println!("[region]\n{}\n", region.grid().map_ref(|value| if *value { 'x' } else { ' ' }));
 		
 		let top_rows:Vec<bool> = vec![false; 25];
 		let center_rows:Vec<bool> = [vec![false; 5], vec![true; 15], vec![false; 5]].into_iter().flatten().collect();
