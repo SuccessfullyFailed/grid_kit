@@ -1,4 +1,4 @@
-use crate::{ Grid, ByteConversion };
+use crate::{ Grid, storage::ByteConversion };
 use file_ref::FileRef;
 use std::error::Error;
 

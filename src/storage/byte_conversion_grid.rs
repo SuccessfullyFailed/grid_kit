@@ -1,4 +1,4 @@
-use crate::{ Grid, ByteConversion };
+use crate::{ Grid, storage::ByteConversion };
 use std::error::Error;
 
 
