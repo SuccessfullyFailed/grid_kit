@@ -20,7 +20,7 @@ mod test {
 			let file:TempFile = TempFile::new(Some("dat"));
 			original_grid.save_to_file(file.path()).unwrap();
 			let validation_grid:Grid<$type> = Grid::read_from_file(file.path()).unwrap();
-			println!("[validation grid]\n{original_grid}\n");
+			println!("[validation grid]\n{validation_grid}\n");
 	
 			assert_eq!(original_grid, validation_grid);
 		};
