@@ -36,7 +36,7 @@ impl<T> Grid<T> {
 	/// A version of index_neighbors that takes arguments for repetitive calculations.
 	pub(crate) fn _index_neighbors(&self, position_index:usize, max_x:usize, max_y:usize) -> Vec<usize> {
 		[
-			if position_index > 0 { Some(position_index - 1) } else { None }, // Left
+			if position_index % self.width > 0 { Some(position_index - 1) } else { None }, // Left
 			if position_index > self.width { Some(position_index - self.width) } else { None }, // Top
 			if position_index % self.width != max_x { Some(position_index + 1) } else { None }, // Right
 			if position_index < max_y { Some(position_index + self.width) } else { None } // Bottom

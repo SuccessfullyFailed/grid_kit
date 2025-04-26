@@ -1,4 +1,4 @@
-use std::{ fmt::Display, ops::{ Index, IndexMut, Range } };
+use std::ops::{ Index, IndexMut, Range };
 use crate::{ Grid, GridIndexer };
 
 
@@ -211,7 +211,7 @@ impl<U> IndexMut<Range<U>> for GridRegion where U:GridIndexer {
 
 
 
-impl<T> Grid<T> where T:PartialEq + Display {
+impl<T> Grid<T> where T:PartialEq {
 
 	/// Starting at the selected pixel, create a list of all attached pixels that match the comparing function. In the comparing function, the first value is the value of the neighbor that added this node to the queue. The second value is the value of the current node.
 	pub fn region_at<U, V>(&self, start:U, comparing_function:V) -> GridRegion where U:GridIndexer, V:Fn(&T, &T) -> bool {

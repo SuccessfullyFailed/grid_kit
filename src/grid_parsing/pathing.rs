@@ -6,7 +6,7 @@ use std::error::Error;
 
 impl GridRegion {
 
-	// Find a path from one index to another. Will only move over pixels that are equal to the starting pixel.
+	// Find a path from one index to another. Will only move over positive pixels in the region.
 	pub fn find_path<U, V>(&self, start:U, end:V) -> Result<Vec<[usize; 2]>, Box<dyn Error>> where U:GridIndexer, V:GridIndexer {
 
 		// Find and validate start and end.
@@ -44,10 +44,10 @@ impl GridRegion {
 				let mut path_indexes:Vec<usize> = Vec::new();
 				let mut backtrack_cursor:usize = current_index;
 				while let Some(previous_index) = &search_grid[backtrack_cursor] {
+					path_indexes.push(backtrack_cursor);
 					if previous_index == &backtrack_cursor {
 						break;
 					}
-					path_indexes.push(backtrack_cursor);
 					backtrack_cursor = *previous_index;
 				}
 				return Ok(path_indexes.into_iter().rev().map(|index| bounds_grid.index_to_xy(index)).map(|[x, y]| [x + self.bounds[0], y + self.bounds[1]]).collect());
@@ -72,5 +72,12 @@ impl GridRegion {
 
 		// No path was found.
 		Err("Could not find path.".into())
+	}
+}
+impl<T> Grid<T> where T:PartialEq {
+
+	// Find a path from one index to another. Will only move over pixels that are equal to the starting pixel.
+	pub fn find_path<U, V>(&self, start:U, end:V) -> Result<Vec<[usize; 2]>, Box<dyn Error>> where U:GridIndexer, V:GridIndexer {
+		self.region_at_eq(start.to_grid_index(self)).find_path(start, end)
 	}
 }

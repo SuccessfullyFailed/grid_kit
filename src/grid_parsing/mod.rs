@@ -7,6 +7,7 @@ mod similarity_u;
 mod sub_grid;
 mod sub_grid_u;
 mod pathing;
+mod pathing_u;
 
 pub use masks::GridMask;
 pub use region::GridRegion;
