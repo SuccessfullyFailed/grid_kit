@@ -25,6 +25,23 @@ impl<T> Grid<T> {
 	pub fn xy_is_valid(&self, x:usize, y:usize) -> bool {
 		x < self.width && y < self.height
 	}
+
+	/// Get the available neighbors for a specific index.
+	pub fn index_neighbors<U>(&self, index:U) -> Vec<usize> where U:GridIndexer {
+		let max_x:usize = self.width - 1;
+		let max_y:usize = self.len() - self.width;
+		self._index_neighbors(index.to_grid_index(self), max_x, max_y)
+	}
+
+	/// A version of index_neighbors that takes arguments for repetitive calculations.
+	pub(crate) fn _index_neighbors(&self, position_index:usize, max_x:usize, max_y:usize) -> Vec<usize> {
+		[
+			if position_index > 0 { Some(position_index - 1) } else { None }, // Left
+			if position_index > self.width { Some(position_index - self.width) } else { None }, // Top
+			if position_index % self.width != max_x { Some(position_index + 1) } else { None }, // Right
+			if position_index < max_y { Some(position_index + self.width) } else { None } // Bottom
+		].into_iter().flatten().collect()
+	}
 }
 impl<T, U> Index<U> for Grid<T> where U:GridIndexer {
 	type Output = T;

@@ -11,8 +11,8 @@ struct EdgeIndex {
 
 
 pub struct GridRegion {
-	grid:Grid<bool>,
-	bounds:[usize; 4]
+	pub(crate) grid:Grid<bool>,
+	pub(crate) bounds:[usize; 4]
 }
 impl GridRegion {
 
@@ -162,6 +162,27 @@ impl GridRegion {
 	pub fn grid(&self) -> &Grid<bool> {
 		&self.grid
 	}
+
+	/// Get the positive indexes of the region.
+	pub fn indexes(&self) -> Vec<usize> {
+		let mut indexes:Vec<usize> = Vec::with_capacity(self.bounds[2] * self.bounds[3]);
+		let mut y_index:usize = self.bounds[1] * self.grid.width;
+		for _y in self.bounds[1]..self.bounds[1] + self.bounds[3] {
+			for x in self.bounds[0]..self.bounds[0] + self.bounds[2] {
+				let index:usize = y_index + x;
+				if self[index] {
+					indexes.push(index);
+				}
+			}
+			y_index += self.grid.width;
+		}
+		indexes
+	}
+
+	/// Get a sub-grid of the bounds.
+	pub fn bounds_sub_grid(&self) -> Grid<&bool> {
+		self.grid.sub_grid(self.bounds)
+	}
 }
 impl<U> Index<U> for GridRegion where U:GridIndexer {
 	type Output = bool;
@@ -222,7 +243,7 @@ impl<T> Grid<T> where T:PartialEq + Display {
 				region_grid[current_index] = true;
 
 				// Add neighbors to queue.
-				for neighbor_index in Self::index_neighbors(current_index, self.width, max_x, max_y) {
+				for neighbor_index in self._index_neighbors(current_index, max_x, max_y) {
 					if !region_grid[neighbor_index] && !checked_values_grid[neighbor_index].contains(&source_value) {
 						queue.push((neighbor_index, &self[current_index]));
 						checked_values_grid[neighbor_index].push(source_value);
@@ -267,7 +288,7 @@ impl<T> Grid<T> where T:PartialEq + Display {
 				region_grid[current_index] = true;
 
 				// Add neighbors to queue.
-				for neighbor_index in Self::index_neighbors(current_index, self.width, max_x, max_y) {
+				for neighbor_index in self._index_neighbors(current_index, max_x, max_y) {
 					if !region_grid[neighbor_index] && !queue.contains(&neighbor_index) {
 						queue.push(neighbor_index);
 					}
@@ -279,15 +300,5 @@ impl<T> Grid<T> where T:PartialEq + Display {
 
 		// Return region.
 		GridRegion::new(region_grid)
-	}
-
-	/// Get the available neighbors for a specific index.
-	fn index_neighbors(position_index:usize, width:usize, max_x:usize, max_y:usize) -> Vec<usize> {
-		[
-			if position_index > 0 { Some(position_index - 1) } else { None }, // Left
-			if position_index > width { Some(position_index - width) } else { None }, // Top
-			if position_index % width != max_x { Some(position_index + 1) } else { None }, // Right
-			if position_index < max_y { Some(position_index + width) } else { None } // Bottom
-		].into_iter().flatten().collect()
 	}
 }
