@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, ops::{Index, IndexMut}};
 
 use crate::{ Grid, GridIndexer };
 
@@ -32,7 +32,7 @@ impl GridRegion {
 		let mut end_x:usize = 0;
 		let y_indexes:Vec<usize> = (0..self.grid.height).map(|y| y * self.grid.width).collect();
 		for x in 0..self.grid.width {
-			if y_indexes.iter().map(|y_index| self.grid[y_index + x]).any(|value| value) {
+			if y_indexes.iter().map(|y_index| self[y_index + x]).any(|value| value) {
 				if start_x > x {
 					start_x = x;
 				}
@@ -59,9 +59,64 @@ impl GridRegion {
 		}
 
 		// Set new bounds.
+		end_x += 1;
+		end_y += 1;
 		start_x = start_x.min(end_x);
 		start_y = start_y.min(end_y);
 		self.bounds = [start_x, start_y, end_x - start_x, end_y - start_y]
+	}
+
+	/// Remove a specific width of edges.
+	pub fn remove_edge(&mut self, removal_width:usize) {
+		
+		// Remove one layer for each removal width.
+		for _ in 0..removal_width {
+			let mut edge_indexes:Vec<usize> = Vec::new();
+		
+			// Find all changes in positive and negative from left to right.
+			if self.bounds[2] > 0 {
+				for y in self.bounds[1]..self.bounds[1] + self.bounds[3] {
+					let start_index:usize = y * self.grid.width + self.bounds[0];
+					let end_index:usize = start_index + self.bounds[2];
+					let mut previous_value:bool = false;
+					for cursor in start_index..end_index {
+						if self[cursor] != previous_value {
+							edge_indexes.push(if previous_value { cursor - 1 } else { cursor });
+							previous_value = self[cursor];
+						}
+					}
+					if previous_value {
+						edge_indexes.push(end_index - 1);
+					}
+				}
+			}
+		
+			// Find all changes in positive and negative from left to right.
+			if self.bounds[3] > 0 {
+				for x in self.bounds[0]..self.bounds[0] + self.bounds[2] {
+					let start_index:usize = self.bounds[1] * self.grid.width + x;
+					let end_index:usize = (self.bounds[1] + self.bounds[3]) * self.grid.width + x;//start_index + self.bounds[3] * self.grid.width;
+					let mut previous_value:bool = false;
+					for cursor in (start_index..end_index).step_by(self.grid.width) {
+						if self[cursor] != previous_value {
+							edge_indexes.push(if previous_value { cursor - self.grid.width } else { cursor });
+							previous_value = self[cursor];
+						}
+					}
+					if previous_value {
+						edge_indexes.push(end_index - self.grid.width);
+					}
+				}
+			}
+
+			// Remove found edge coordinates.
+			for edge_index in edge_indexes {
+				self[edge_index] = false;
+			}
+		}
+
+		// Update bounds.
+		self.update_bounds();
 	}
 
 
@@ -71,6 +126,18 @@ impl GridRegion {
 	/// Get the grid of the region.
 	pub fn grid(&self) -> &Grid<bool> {
 		&self.grid
+	}
+}
+impl<U> Index<U> for GridRegion where U:GridIndexer {
+	type Output = bool;
+
+	fn index(&self, index:U) -> &Self::Output {
+		&self.grid[index]
+	}
+}
+impl<U> IndexMut<U> for GridRegion where U:GridIndexer {
+	fn index_mut(&mut self, index:U) -> &mut Self::Output {
+		&mut self.grid[index]
 	}
 }
 
@@ -91,7 +158,7 @@ impl<T> Grid<T> where T:PartialEq + Display {
 		let mut checked_values_grid:Grid<Vec<&T>> = Grid::new(vec![Vec::new(); self.width * self.height], self.width, self.height);
 
 		// Keep checking positions in the queue.
-		let mut queue:Vec<(usize, &T)> = Vec::with_capacity(self.width * self.height);
+		let mut queue:Vec<(usize, &T)> = Vec::with_capacity(self.width * self.height * 4); // Has a lot of space, likely too much. Stops it from moving around in memory when growing.
 		queue.push((start_index, &self[start_index]));
 		let mut queue_cursor:usize = 0; // Keep a cursor to prevent moving the entire queue through memory on resizing.
 		while queue_cursor < queue.len() {
@@ -136,7 +203,7 @@ impl<T> Grid<T> where T:PartialEq + Display {
 		let target_value:&T = &self[start_index];
 
 		// Keep checking positions in the queue.
-		let mut queue:Vec<usize> = Vec::with_capacity(self.width * self.height);
+		let mut queue:Vec<usize> = Vec::with_capacity(self.width * self.height); // Has a lot of space, likely too much. Stops it from moving around in memory when growing.
 		queue.push(start_index);
 		let mut queue_cursor:usize = 0; // Keep a cursor to prevent moving the entire queue through memory on resizing.
 		while queue_cursor < queue.len() {
