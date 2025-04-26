@@ -9,4 +9,4 @@ image={ version="0.23.14", optional=true }
 
 [features]
 file_storage=["dep:file_ref"]
-png_conversion=["dep:image"]
+png_conversion=["dep:image", "dep:file_ref"]
