@@ -72,6 +72,16 @@ impl GridRegion {
 		self.bounds = [start_x, start_y, end_x - start_x, end_y - start_y]
 	}
 
+	/// Add a specific width of edges.
+	pub fn add_edge(&mut self, addition_width:usize) {
+		for _ in 0..addition_width {
+			for edge_index in self.find_edges().into_iter().map(|edge| edge.negative_index).flatten() {
+				self[edge_index] = true;
+			}
+			self.update_bounds();
+		}
+	}
+
 	/// Remove a specific width of edges.
 	pub fn remove_edge(&mut self, removal_width:usize) {
 		for _ in 0..removal_width {
@@ -89,55 +99,54 @@ impl GridRegion {
 			return edges;
 		}
 
-		// First and last rows and columns.
-		for y in [self.bounds[1], self.bounds[1] + self.bounds[3] - 1] {
-			for x in self.bounds[0]..self.bounds[0] + self.bounds[2] {
-				let index:usize = y * self.grid.width + x;
-				if self[index] {
-					edges.push(EdgeIndex { positive_index: index, negative_index: None })
+		// Figure out sub-bounds to find edges.
+		let x_start:usize = self.bounds[0] - if self.bounds[0] > 0 { 1 } else { 0 };
+		let x_end:usize = self.bounds[0] + self.bounds[2] + if self.bounds[0] + self.bounds[2] < self.grid.width { 1 } else { 0 };
+		let y_start:usize = self.bounds[1] - if self.bounds[1] > 0 { 1 } else { 0 };
+		let y_end:usize = self.bounds[1] + self.bounds[3] + if self.bounds[1] + self.bounds[3] < self.grid.width { 1 } else { 0 };
+
+		// Find edges in center rows and columns.
+		let mut last_value_y:Vec<bool> = vec![false; x_end];
+		for y in y_start..y_end {
+			let y_start_index:usize = y * self.grid.width;
+			let mut last_value_x:bool = false;
+			for x in x_start..x_end {
+				let index:usize = y_start_index + x;
+				let value:bool = self[index];
+				if value != last_value_x {
+					edges.push(EdgeIndex {
+						positive_index: if value { index } else { index - 1 },
+						negative_index: if x == 0 { None } else { Some(if value { index - 1 } else { index }) }
+					});
+					last_value_x = value;
+				}
+				if value != last_value_y[x] {
+					edges.push(EdgeIndex {
+						positive_index: if value { index } else { index - self.grid.width },
+						negative_index: if y == 0 { None } else { Some(if value { index - self.grid.width } else { index }) }
+					});
+					last_value_y[x] = value;
 				}
 			}
 		}
-		for y in self.bounds[1]..self.bounds[1] + self.bounds[3] {
-			for x in [self.bounds[0], self.bounds[0] + self.bounds[2] - 1] {
+
+		// Find edges in last row and column.
+		if self.bounds[0] + self.bounds[2] == self.grid.width {
+			let x:usize = self.grid.width - 1;
+			for y in self.bounds[1]..self.bounds[1] + self.bounds[3] {
 				let index:usize = y * self.grid.width + x;
 				if self[index] {
 					edges.push(EdgeIndex { positive_index: index, negative_index: None });
 				}
 			}
 		}
-
-		// Center rows and columns.
-		let mut last_value_y:Vec<bool> = self.grid[0..self.bounds[0] + self.bounds[2]].to_vec();
-		for y in self.bounds[1] + 1..self.bounds[1] + self.bounds[3] {
-			let y_start_index:usize = y * self.grid.width;
-			let mut last_value_x:bool = self[y_start_index + self.bounds[0]];
-			for x in self.bounds[0] + 1..self.bounds[0] + self.bounds[2] {
-				let index:usize = y_start_index + x;
-				let value:bool = self[index];
-				if value != last_value_x {
-					let (positive, negative) = if value { (index, index - 1) } else { (index - 1, index) };
-					edges.push(EdgeIndex { positive_index: positive, negative_index: Some(negative) });
-					last_value_x = value;
+		if self.bounds[1] + self.bounds[3] == self.grid.height {
+			let y_index:usize = (self.grid.height - 1) * self.grid.width;
+			for x in self.bounds[0]..self.bounds[0] + self.bounds[2] {
+				let index:usize = y_index + x;
+				if self[index] {
+					edges.push(EdgeIndex { positive_index: index, negative_index: None });
 				}
-				if value != last_value_y[x] {
-					let (positive, negative) = if value { (index, index - self.grid.width) } else { (index - self.grid.width, index) };
-					edges.push(EdgeIndex { positive_index: positive, negative_index: Some(negative) });
-					last_value_y[x] = value;
-				}
-			}
-		}
-
-		// Trailing rows and columns.
-		for x in self.bounds[0]..self.bounds[0] + self.bounds[2] {
-			if self[x] {
-				edges.push(EdgeIndex { positive_index: x, negative_index: None })
-			}
-		}
-		for y in self.bounds[1]..self.bounds[1] + self.bounds[3] {
-			let index:usize = y * self.grid.width;
-			if self[index] {
-				edges.push(EdgeIndex { positive_index: index, negative_index: None });
 			}
 		}
 
