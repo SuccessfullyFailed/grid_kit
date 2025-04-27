@@ -50,6 +50,28 @@ impl<T> Default for SimilaritySettings<T> where T:PartialEq {
 
 impl<T> Grid<T> {
 
+	/* USAGE METODS */
+
+	/// Get the factor of the similarity between this grid and another. If minimum_similarity is set, will return 1.0 if similarity exceeds threshold, otherwise returns 0.0. If grids aren't the same size, prints warning and returns default value.
+	pub fn similarity_to(&self, other:&Grid<T>, settings:&SimilaritySettings<T>) -> f32 {
+		if let Some(invalidation_value) = self.validate_settings(other, &settings) {
+			return invalidation_value;
+		}
+
+		// Call less ambiguous sub-functions to find the similarity depending on settings.
+		let similarity:f32 = if let Some(mask) = &settings.mask {
+			self.similarity_processor_masked(other, settings.comparing_method, settings.minimum_similarity, mask)
+		} else {
+			self.similarity_processor_default(other, settings.comparing_method, settings.minimum_similarity)
+		};
+
+		// Return similarity.
+		match settings.minimum_similarity {
+			Some(min) => if similarity >= min { 1.0 } else { 0.0 },
+			None => similarity
+		}
+	}
+
 	// If grids are not the same size, show a warning and return the default value.
 	fn validate_settings(&self, other:&Grid<T>, settings:&SimilaritySettings<T>) -> Option<f32> {
 		const DEFAULT_VALUE:f32 = 0.0;
@@ -64,44 +86,67 @@ impl<T> Grid<T> {
 			None
 		}
 	}
+	
 
-	/// Get the factor of the similarity between this grid and another. If minimum_similarity is set, will return 1.0 if similarity exceeds threshold, otherwise returns 0.0. If grids aren't the same size, prints warning and returns default value.
-	pub fn similarity_to(&self, other:&Grid<T>, settings:&SimilaritySettings<T>) -> f32 {
-		if let Some(invalidation_value) = self.validate_settings(other, &settings) {
-			return invalidation_value;
+
+	/* SIMILARITY PROCESSOR METHODS */
+
+	/// Get the amount of mismatches between 2 masked datasets.
+	fn similarity_processor_masked(&self, other:&Grid<T>, compare_method:CompareEqualMethod<T>, minimum_similarity_factor:Option<f32>, mask:&GridMask) -> f32 {
+
+		// Create masked datasets.
+		let self_data:Vec<&[T]> = self.masked_data(&mask);
+		let other_data:Vec<&[T]> = other.masked_data(&mask);
+		
+		// Calculate max allowed mismatches.
+		let max_possible_matches:usize = self_data.len();
+		let max_allowed_mismatches:Option<usize> = minimum_similarity_factor.map(|similarity| (1.0 - similarity)).map(|difference| (max_possible_matches as f32 * difference) as usize);
+
+		// Find mismatches.
+		let mut mismatches:usize = 0;
+		for (left, right) in self_data.iter().zip(other_data) {
+			mismatches += Self::list_mismatch_counter(left, right, compare_method, max_allowed_mismatches.map(|max| max - mismatches));
+			if max_allowed_mismatches.is_some() && mismatches > max_allowed_mismatches.unwrap() {
+				break;
+			}
 		}
+		
+		// Return similarity.
+		(max_possible_matches - mismatches) as f32 / max_possible_matches as f32
+	}
 
-		// Parse data based on masked/unmasked.
-		let (self_data, other_data) = match &settings.mask {
-			Some(mask) => (self.masked_data(&mask), other.masked_data(&mask)),
-			None => (self.data.iter().collect(), other.data.iter().collect())
-		};
+	/// Get the amount of mismatches between 2 masked datasets.
+	fn similarity_processor_default(&self, other:&Grid<T>, compare_method:CompareEqualMethod<T>, minimum_similarity_factor:Option<f32>) -> f32 {
+		let max_possible_matches:usize = self.data.len();
+		let max_allowed_mismatches:Option<usize> = minimum_similarity_factor.map(|similarity| (1.0 - similarity)).map(|difference| (max_possible_matches as f32 * difference) as usize);
+		let mismatches:usize = Self::list_mismatch_counter(&self.data, &other.data, compare_method, max_allowed_mismatches);
+		(max_possible_matches - mismatches) as f32 / max_possible_matches as f32
+	}
 
-		// Count mismatches in data.
-		let max_matches:usize = self_data.len();
-		let mismatches:usize = match &settings.minimum_similarity {
 
-			// With similarity threshold.
-			Some(minimum_similarity) => {
-				let maximum_allowed_mismatches:usize = (max_matches as f32 * (1.0 - minimum_similarity)).round() as usize;
+
+	/* MISMATCH COUNTER METHODS */
+
+	/// Default similarity processor method. Counts mismatches between grids.
+	fn list_mismatch_counter(left_data:&[T], right_data:&[T], compare_method:CompareEqualMethod<T>, max_allowed_mismatches:Option<usize>) -> usize {
+		match &max_allowed_mismatches {
+
+			// With max mismatches.
+			Some(max_allowed_mismatches) => {
 				let mut mismatches:usize = 0;
-				for (a, b) in self.data.iter().zip(&other.data) {
-					if !(settings.comparing_method)(a, b) {
+				for (a, b) in left_data.iter().zip(right_data) {
+					if !compare_method(a, b) {
 						mismatches += 1;
-						if mismatches > maximum_allowed_mismatches {
-							break;
+						if mismatches > *max_allowed_mismatches {
+							return mismatches;
 						}
 					}
 				}
-				if mismatches > maximum_allowed_mismatches { max_matches } else { 0 }
+				mismatches
 			},
 
 			// Without similarity threshold.
-			None => max_matches - self_data.iter().zip(&other_data).filter(|(a, b)| (settings.comparing_method)(a, b)).count() // Subtraction prevents having to flip every result.
-		};
-		
-		// Return the matching factor.
-		let matches:usize = max_matches - mismatches;
-		matches as f32 / max_matches as f32
+			None => left_data.len() - left_data.iter().zip(right_data).filter(|(a, b)| compare_method(a, b)).count() // Subtraction prevents having to flip every result.
+		}
 	}
 }

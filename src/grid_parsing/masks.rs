@@ -105,8 +105,8 @@ impl<T, U> Maskable for (Grid<T>, U) where T:PartialEq + 'static, U:Fn(&T) -> bo
 impl<T> Grid<T> {
 
 	/// Return the data of self filtered by the mask.
-	pub(crate) fn masked_data(&self, mask:&GridMask) -> Vec<&T> {
-		mask.positive_ranges.iter().map(|range| &self.data[range.clone()]).flatten().collect()
+	pub(crate) fn masked_data(&self, mask:&GridMask) -> Vec<&[T]> {
+		mask.positive_ranges.iter().map(|range| &self.data[range.clone()]).collect()
 	}
 }
 impl<T> Grid<T> where T:PartialEq + 'static {
