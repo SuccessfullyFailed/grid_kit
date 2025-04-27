@@ -33,34 +33,45 @@ impl GridRegion {
 	fn update_bounds(&mut self) {
 		self.bounds = [0; 4];
 
-		// Update StartX and EndX.
-		let mut start_x:usize = self.grid.height;
+		let mut start_x:usize = self.grid.width;
+		let mut start_y:usize = self.grid.height;
 		let mut end_x:usize = 0;
+		let mut end_y:usize = 0;
+
 		let y_indexes:Vec<usize> = (0..self.grid.height).map(|y| y * self.grid.width).collect();
-		for x in 0..self.grid.width {
-			if y_indexes.iter().map(|y_index| self[y_index + x]).any(|value| value) {
-				if start_x > x {
-					start_x = x;
-				}
-				if end_x < x {
-					end_x = x;
-				}
+
+		// Find x start and end.
+		for y in 0..self.grid.height {
+			let y_index:usize = y_indexes[y];
+			if let Some(x) = self.grid.data[y_index..y_index + start_x].iter().position(|node| *node) {
+				start_x = x;
+				if x > end_x { end_x = x; }
+				if y < start_y { start_y = y; }
+				if y > end_y { end_y = y; }
+			}
+			if let Some(flipped_x) = self.grid.data[y_index + end_x..y_index + self.grid.width].iter().rev().position(|node| *node) {
+				let x:usize = self.grid.width - flipped_x - 1;
+				end_x = x;
+				if x < start_x { start_x = x; }
+				if y < start_y { start_y = y; }
+				if y > end_y { end_y = y; }
 			}
 		}
 
-		// Update StartY and EndY.
-		let mut start_y:usize = self.grid.height;
-		let mut end_y:usize = 0;
-		for y in 0..self.grid.height {
-			let start_index:usize = y * self.grid.width;
-			let end_index:usize = (start_index + self.grid.width - 1).max(start_index);
-			if self.grid.data[start_index..end_index].iter().any(|value| *value) {
-				if start_y > y {
-					start_y = y;
-				}
-				if end_y < y {
-					end_y = y;
-				}
+		// Find y start and end.
+		for x in 0..self.grid.width {
+			if let Some(y) = y_indexes[..start_y].iter().position(|y_index| self.grid[y_index + x]) {
+				start_y = y;
+				if x < start_x { start_x = x; }
+				if x > end_x { end_x = x; }
+				if y > end_y { end_y = y; }
+			}
+			if let Some(flipped_y) = y_indexes[end_y..].iter().rev().position(|y_index| self.grid[y_index + x]) {
+				let y:usize = self.grid.height - flipped_y - 1;
+				end_y = y;
+				if x < start_x { start_x = x; }
+				if x > end_x { end_x = x; }
+				if y < start_y { start_y = y; }
 			}
 		}
 
