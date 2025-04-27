@@ -52,7 +52,7 @@ mod test {
 		let sub_grid:Grid<i32> = Grid::new(vec![3, 4, 6, 7], 2, 2);
 		println!("[sub grid]\n{sub_grid}\n");
 		
-		assert_eq!(grid.find(&sub_grid, &SimilaritySettings::default()), Some([1, 0]));
+		assert_eq!(grid.find(&sub_grid, &SimilaritySettings::default()), Some([0, 1]));
 	}
 
 	#[test]
