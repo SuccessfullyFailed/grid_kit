@@ -4,6 +4,20 @@ use crate::Grid;
 
 impl<T> Grid<T> {
 
+	/// Get the data of a specific sub-field.
+	pub(crate) fn sub_field_data(&self, bounds:[usize; 4]) -> Vec<&[T]> {
+		let end_x:usize = (bounds[0] + bounds[2]).min(self.width).max(bounds[0]);
+		let end_y:usize = (bounds[1] + bounds[3]).min(self.height).max(bounds[1]);
+		
+		let mut sub_data:Vec<&[T]> = Vec::new();
+		for y in bounds[1]..end_y {
+			let y_index:usize = y * self.width;
+			sub_data.push(&self.data[y_index + bounds[0]..y_index + end_x]);
+		}
+
+		sub_data
+	}
+
 	/// Create a sub-grid. Bounds are XYWH.
 	pub fn sub_grid(&self, bounds:[usize; 4]) -> Grid<&T> {
 		let end_x:usize = (bounds[0] + bounds[2]).min(self.width).max(bounds[0]);

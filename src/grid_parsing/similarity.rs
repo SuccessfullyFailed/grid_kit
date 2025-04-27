@@ -50,7 +50,7 @@ impl<T> Default for SimilaritySettings<T> where T:PartialEq {
 
 impl<T> Grid<T> {
 
-	/* USAGE METODS */
+	/* SIMILARITY USAGE  METODS */
 
 	/// Get the factor of the similarity between this grid and another. If minimum_similarity is set, will return 1.0 if similarity exceeds threshold, otherwise returns 0.0. If grids aren't the same size, prints warning and returns default value.
 	pub fn similarity_to(&self, other:&Grid<T>, settings:&SimilaritySettings<T>) -> f32 {
@@ -85,6 +85,80 @@ impl<T> Grid<T> {
 		} else {
 			None
 		}
+	}
+
+
+
+	/* SUB-GRID FINDING METHODS */
+	
+	/// Find a sub-grid in this grid. If no minimum simmilarity is specified, the function will assume a full match is required.
+	pub fn find(&self, sub_grid:&Grid<T>, settings:&SimilaritySettings<T>) -> Option<[usize; 2]> {
+		self.find_starting_at_offset(sub_grid, settings, [0; 2])
+	}
+	
+	/// Find a sub-grid in this grid, starting at a specific offset. If no minimum simmilarity is specified, the function will assume a full match is required.
+	fn find_starting_at_offset(&self, sub_grid:&Grid<T>, settings:&SimilaritySettings<T>, offset:[usize; 2]) -> Option<[usize; 2]> {
+		if sub_grid.width == 0 || sub_grid.height == 0 || self.width < sub_grid.width || self.height < sub_grid.height {
+			return None;
+		}
+
+		// Prepare data to match sub-fields taken from self later.
+		let sub_grid_data:Vec<&[T]> = sub_grid.sub_field_data([0, 0, sub_grid.width, sub_grid.height]);
+
+		// Find the scanning bounds.
+		let max_allowed_mismatches:usize = settings.minimum_similarity.map(|similarity| (sub_grid.data.len() as f32 * (1.0 - similarity)) as usize).unwrap_or(0);
+		let scan_end_x:usize = self.width - sub_grid.width + 1;
+		let scan_end_y:usize = self.height - sub_grid.height + 1;
+		let mut cursor:[usize; 2] = offset;
+		while cursor[1] < scan_end_y {
+
+			// Check if sub-field at position matches sub-grid.
+			let mut mismatches:usize = 0;
+			let source_field:Vec<&[T]> = self.sub_field_data([cursor[0], cursor[1], sub_grid.width, sub_grid.height]);
+			match &settings.mask {
+
+				// Masked compare.
+				Some(mask) => {
+					let mut cursor:[usize; 2] = [0, 0];
+					let max_x:usize = sub_grid_data[0].len();
+					let max_y:usize = sub_grid_data.len();
+					while cursor[1] < max_y {
+						if mask.grid()[cursor] && !(settings.comparing_method)(&sub_grid_data[cursor[1]][cursor[0]],  &source_field[cursor[1]][cursor[0]]) {
+							mismatches += 1;
+							if mismatches > max_allowed_mismatches {
+								break;
+							}
+						}
+						cursor[0] += 1;
+						if cursor[0] == max_x {
+							cursor = [0, cursor[1] + 1];
+						}
+					}
+				}
+
+				// Unmasked compare.
+				None => {
+					for (left, right) in sub_grid_data.iter().zip(source_field) {
+						mismatches += Self::list_mismatch_counter(*left, right, settings.comparing_method, Some(max_allowed_mismatches - mismatches));
+						if mismatches > max_allowed_mismatches {
+							break;
+						}
+					}
+				}
+			}
+			if mismatches <= max_allowed_mismatches {
+				return Some(cursor);
+			}
+
+			// Incrmeent cursor.
+			cursor[0] += 1;
+			if cursor[0] == scan_end_x {
+				cursor =  [0, cursor[1] + 1];
+			}
+		}
+		
+		// Sub-grid not found.
+		None
 	}
 	
 
