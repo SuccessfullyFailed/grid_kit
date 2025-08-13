@@ -103,6 +103,23 @@ impl GridRegion {
 		self.update_bounds();
 	}
 
+	/// Map the region to values indicating their distance to the nearest edge.
+	pub fn to_edge_distance_map(mut self) -> Grid<usize> {
+		let mut edge_map:Grid<usize> = Grid::new(vec![0; self.grid.width * self.grid.height], self.grid.width, self.grid.height);
+		let mut distance:usize = 1;
+		let mut any_changes:bool = true;
+		while any_changes {
+			any_changes = false;
+			for edge_index in self.find_edges().into_iter().map(|edge| edge.positive_index) {
+				self[edge_index] = false;
+				edge_map[edge_index] = distance;
+				any_changes = true;
+			}
+			distance += 1;
+		}
+		edge_map
+	}
+
 	/// Find the edges of the region.
 	fn find_edges(&self) -> Vec<EdgeIndex> {
 		let mut edges:Vec<EdgeIndex> = Vec::with_capacity(self.grid.width * self.grid.height);

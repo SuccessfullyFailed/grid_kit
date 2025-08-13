@@ -58,22 +58,22 @@ impl GridMask {
 		&self.source_grid
 	}
 
-	/// Get the positive ranges.
+	/// Get ranges of all indexes in the grid containing "true".
 	pub fn positive_ranges(&self) -> &[Range<usize>] {
 		&self.positive_ranges
 	}
 
-	/// Get the negative ranges.
+	/// Get ranges of all indexes in the grid containing "false".
 	pub fn negative_ranges(&self) -> &[Range<usize>] {
 		&self.negative_ranges
 	}
 
-	/// Get the width.
+	/// Get the width of the grid.
 	pub fn width(&self) -> usize {
 		self.source_grid.width
 	}
 
-	/// Get the height.
+	/// Get the height of the grid.
 	pub fn height(&self) -> usize {
 		self.source_grid.height
 	}

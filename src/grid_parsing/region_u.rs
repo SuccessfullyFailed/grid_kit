@@ -29,8 +29,9 @@ mod test {
 		let grid:Grid<char> = Grid::new(vec![' ', ' ', 'x', ' ', ' ', 	' ', ' ', 'x', ' ', 'x', 	'x', 'x', 'x', 'x', 'x', 	' ', 'x', 'x', 'x', ' ', 	' ', ' ', 'x', ' ', ' '], 5, 5);
 		println!("[grid]\n{grid}\n");
 		let mut region:GridRegion = grid.region_at_eq([2, 2]);
-		region.remove_edge(1);
 		println!("[region]\n{}\n", region.grid().map_ref(|value| if *value { 'x' } else { ' ' }));
+		region.remove_edge(1);
+		println!("[modified region]\n{}\n", region.grid().map_ref(|value| if *value { 'x' } else { ' ' }));
 		
 		assert_eq!(&region.grid().data, &[' ', ' ', ' ', ' ', ' ', 	' ', ' ', ' ', ' ', ' ', 	' ', ' ', 'x', ' ', ' ', 	' ', ' ', 'x', ' ', ' ', 	' ', ' ', ' ', ' ', ' '].map(|c| c == 'x'));
 	}
@@ -40,8 +41,9 @@ mod test {
 		let grid:Grid<char> = Grid::new(vec!['x'; 25 * 25], 25, 25);
 		println!("[grid]\n{grid}\n");
 		let mut region:GridRegion = grid.region_at_eq([12, 12]);
-		region.remove_edge(5);
 		println!("[region]\n{}\n", region.grid().map_ref(|value| if *value { 'x' } else { ' ' }));
+		region.remove_edge(5);
+		println!("[modified region]\n{}\n", region.grid().map_ref(|value| if *value { 'x' } else { ' ' }));
 		
 		let validation_grid_data:Vec<bool> = (0..25).map(|y| 
 			if y < 5 || y > 19 {
@@ -94,5 +96,15 @@ mod test {
 
 		// Validate result.
 		assert_eq!(&region.grid().data, &validation_grid_data);
+	}
+
+	#[test]
+	fn test_region_edge_distance_map() {
+		let grid:Grid<char> = Grid::new((0..9).map(|row_index| if row_index > 0 && row_index < 7 { vec![' ', ' ', 'x', 'x', 'x', 'x', 'x', ' ', ' '] } else { vec![' '; 9] }).flatten().collect::<Vec<char>>(), 9, 9);
+		println!("[grid]\n{grid}\n");
+		let region:GridRegion = grid.region_at_eq([2, 2]);
+		println!("[region]\n{}\n", region.grid().map_ref(|value| if *value { 'x' } else { ' ' }));
+		let edge_map:Grid<usize> = region.to_edge_distance_map();
+		println!("[edge distance map]\n{}\n", edge_map.map(|distance| if distance == 0 { " ".to_string() } else { distance.to_string() }));
 	}
 }
