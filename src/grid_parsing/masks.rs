@@ -81,34 +81,6 @@ impl GridMask {
 
 
 
-pub trait Maskable {
-	fn as_mask(self) -> GridMask;
-}
-impl Maskable for GridMask {
-	fn as_mask(self) -> GridMask {
-		self
-	}
-}
-impl Maskable for Grid<bool> {
-	fn as_mask(self) -> GridMask {
-		GridMask::new(self)
-	}
-}
-impl<T, U> Maskable for (Grid<T>, U) where T:PartialEq + 'static, U:Fn(&T) -> bool + 'static {
-	fn as_mask(self) -> GridMask {
-		self.0.create_mask(self.1)
-	}
-}
-
-
-
-impl<T> Grid<T> {
-
-	/// Return the data of self filtered by the mask.
-	pub(crate) fn masked_data(&self, mask:&GridMask) -> Vec<&[T]> {
-		mask.positive_ranges.iter().map(|range| &self.data[range.clone()]).collect()
-	}
-}
 impl<T> Grid<T> where T:PartialEq + 'static {
 
 	/// Create a mask based on which values pass the given function.
