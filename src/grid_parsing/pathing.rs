@@ -94,7 +94,7 @@ impl<T> Grid<T> {
 			return Err("Start coordinate falls outside of the grid.".into());
 		}
 		let max_x:usize = self.width - 1;
-		let max_y:usize = self.len() - self.width;	
+		let max_y:usize = self.len() - self.width;
 
 		// Keep checking positions in the queue.
 		let mut origin_grid:Grid<Option<(usize, X)>> = Grid::new(vec![None; self.width * self.height], self.width, self.height); // For each node, keep the origin and value of total weight to get here.
@@ -132,7 +132,7 @@ impl<T> Grid<T> {
 					if let Some(weight_addition_to_neighbor) = weight_function((current_index, current_value), (neighbor_index, neighbor_value)) {
 						let value_to_neighbor:X = current_weight.clone() + weight_addition_to_neighbor;
 						let current_neighbor_origin:&Option<(usize, X)> = &origin_grid[neighbor_index];
-						if current_neighbor_origin.is_none() || value_to_neighbor < current_neighbor_origin.as_ref().unwrap().1 {
+						if current_neighbor_origin.is_none() || (current_neighbor_origin.as_ref().unwrap().0 != current_index && value_to_neighbor < current_neighbor_origin.as_ref().unwrap().1) {
 							origin_grid[neighbor_index] = Some((current_index, value_to_neighbor.clone()));
 							queue_additions.push((neighbor_index, value_to_neighbor));
 						}

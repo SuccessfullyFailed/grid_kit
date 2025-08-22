@@ -10,6 +10,7 @@ struct EdgeIndex {
 
 
 
+#[derive(Clone)]
 pub struct GridRegion {
 	pub(crate) grid:Grid<bool>,
 	pub(crate) bounds:[usize; 4]
