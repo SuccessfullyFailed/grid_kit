@@ -32,3 +32,32 @@ impl<T> Grid<T> where T:Clone {
 		]
 	}
 }
+impl<T> Grid<Grid<T>> where T:Default + Clone {
+
+	/// Flattens a grid of grids into one grid. Acts a lot like a CSS grid.
+	pub fn flatten_grid(&self) -> Grid<T> {
+
+		// Calculate the size of rows and columns in the flattened grid.
+		let col_widths:Vec<usize> = (0..self.width).map(|x| (0..self.height).map(|y| self[(x, y)].width).max().unwrap_or_default()).collect::<Vec<usize>>();
+		let row_heights:Vec<usize> = (0..self.height).map(|y| (0..self.width).map(|x| self[(x, y)].height).max().unwrap_or_default()).collect::<Vec<usize>>();
+
+		// Create a new empty grid.
+		let flattened_width:usize = col_widths.iter().sum();
+		let flattened_height:usize = row_heights.iter().sum();
+		let mut flattened:Grid<T> = Grid::new(vec![T::default(); flattened_width * flattened_height], flattened_width, flattened_height);
+
+		// Append grids to the new grid.
+		let mut cursor:[usize; 2] = [0, 0];
+		for (y, row_height) in row_heights.iter().enumerate() {
+			for (x, col_width) in col_widths.iter().enumerate() {
+				flattened.append_at(&self[(x, y)], cursor);
+				cursor[0] += col_width;
+			}
+			cursor[0] = 0;
+			cursor[1] += row_height;
+		}
+
+		// Return new grid.
+		flattened
+	}
+}
