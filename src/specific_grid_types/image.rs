@@ -1,3 +1,4 @@
+use std::fmt::{ Debug, Display };
 use crate::Grid;
 
 
@@ -97,13 +98,13 @@ impl<T> Grid<T> where T:ColorConvertable {
 
 
 
-#[derive(Clone, Copy, PartialEq, Default, Debug)]
+#[derive(Clone, Copy, PartialEq, Default)]
 pub struct Color(pub u32);
 impl Color {
 
 	/* CONSTRUCTOR METHODS */
 
-	/// Create a new color.
+	/// Create a new 0xAARRGGBB color.
 	pub fn new<T>(source:T) -> Color where T:ColorConvertable {
 		source.to_color()
 	}
@@ -167,6 +168,16 @@ impl Color {
 	/// Get the shade of the color.
 	pub fn shade(&self) -> u8 {
 		(self.0.to_be_bytes()[1..].iter().map(|val| *val as u16).sum::<u16>() / 3) as u8
+	}
+}
+impl Display for Color {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{:#010x}", self.0)
+	}
+}
+impl Debug for Color {
+	fn fmt(&self, f:&mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{:#010x}", self.0)
 	}
 }
 pub trait ColorConvertable {

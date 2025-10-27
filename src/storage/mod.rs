@@ -18,3 +18,8 @@ pub(crate) use byte_conversion_t::ByteConversion;
 mod png_conversion;
 #[cfg(feature="png_conversion")]
 mod png_conversion_u;
+
+#[cfg(feature="bmp_conversion")]
+mod bpm_conversion;
+#[cfg(feature="bmp_conversion")]
+mod bmp_conversion_u;
