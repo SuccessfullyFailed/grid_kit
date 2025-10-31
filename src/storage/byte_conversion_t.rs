@@ -1,4 +1,4 @@
-pub trait ByteConversion:Clone {
+pub trait GridByteConvertible:Clone {
 
 	/// Represent the datatype as bytes.
 	fn as_bytes(&self) -> Vec<u8>;
@@ -19,7 +19,7 @@ pub trait ByteConversion:Clone {
 
 macro_rules! implement_byte_conversion_for_numberic {
 	($type:ty, $type_size:expr) => {
-		impl ByteConversion for $type {
+		impl GridByteConvertible for $type {
 
 			/// Represent the datatype as bytes.
 			fn as_bytes(&self) -> Vec<u8> {
@@ -68,7 +68,7 @@ implement_byte_conversion_for_numberic!(f64, 8);
 
 /* MISCELLANEOUS IMPLEMENTATIONS */
 
-impl ByteConversion for bool {
+impl GridByteConvertible for bool {
 	
 	/// Represent the datatype as bytes.
 	fn as_bytes(&self) -> Vec<u8> {
@@ -98,7 +98,7 @@ impl ByteConversion for bool {
 		1
 	}
 }
-impl ByteConversion for String {
+impl GridByteConvertible for String {
 
 	/// Represent the datatype as bytes.
 	fn as_bytes(&self) -> Vec<u8> {
@@ -125,7 +125,7 @@ impl ByteConversion for String {
 
 /* LIST IMPLEMENTATIONS */
 
-impl<T, const LENGTH:usize> ByteConversion for [T; LENGTH] where T:ByteConversion {
+impl<T, const LENGTH:usize> GridByteConvertible for [T; LENGTH] where T:GridByteConvertible {
 
 	/// Represent the datatype as bytes.
 	fn as_bytes(&self) -> Vec<u8> {
@@ -162,7 +162,7 @@ impl<T, const LENGTH:usize> ByteConversion for [T; LENGTH] where T:ByteConversio
 		Vec::<T>::bytes_size(source_bytes)
 	}
 }
-impl<T> ByteConversion for Vec<T> where T:ByteConversion {
+impl<T> GridByteConvertible for Vec<T> where T:GridByteConvertible {
 
 	/// Represent the datatype as bytes.
 	fn as_bytes(&self) -> Vec<u8> {

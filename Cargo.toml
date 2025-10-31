@@ -6,8 +6,8 @@ edition="2024"
 [dependencies]
 bytes_parser={ git="https://github.com/SuccessfullyFailed/bytes_parser", optional=true }
 file_ref={ git="https://github.com/SuccessfullyFailed/file_ref", optional=true }
-image={ version="0.23.14", optional=true }
 winapi={ version="0.3", features=["winuser", "wingdi"], optional=true }
+image={ version="0.23.14", optional=true }
 
 [features]
 file_storage=["dep:file_ref"]

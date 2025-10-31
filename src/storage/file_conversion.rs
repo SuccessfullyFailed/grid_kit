@@ -1,10 +1,10 @@
-use crate::{ Grid, storage::ByteConversion };
+use crate::{ Grid, storage::GridByteConvertible };
 use file_ref::FileRef;
 use std::error::Error;
 
 
 
-impl<T> Grid<T> where T:ByteConversion {
+impl<T> Grid<T> where T:GridByteConvertible {
 
 	/// Save the grid to a file.
 	pub fn save_to_file(&self, file_path:&str) -> Result<(), Box<dyn Error>> {

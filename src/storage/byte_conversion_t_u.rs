@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-	use crate::storage::ByteConversion;
+	use crate::storage::GridByteConvertible;
 
 
 
@@ -121,8 +121,8 @@ mod tests {
 	fn test_type_byte_conversion_string() {
 		for value in ["test_lowercase", "TEST_UPPERCASE", "TEST_MIXED_CASE", "TEST_SPECIAL_CASE 1234567890!@#$%^&*()-_=+[]{};':\",>\\"] {
 			println!("Testing byte conversion for value {value}");
-			assert_eq!(value, String::from_bytes(&ByteConversion::as_bytes(&value.to_string())).unwrap());
-			assert_eq!(value, String::from_consume_bytes(&mut ByteConversion::as_bytes(&value.to_string())).unwrap());
+			assert_eq!(value, String::from_bytes(&GridByteConvertible::as_bytes(&value.to_string())).unwrap());
+			assert_eq!(value, String::from_consume_bytes(&mut GridByteConvertible::as_bytes(&value.to_string())).unwrap());
 		}
 	}
 

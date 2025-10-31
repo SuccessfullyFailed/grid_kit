@@ -1,4 +1,4 @@
-use crate::{ Grid, storage::ByteConversion };
+use crate::{ Grid, storage::GridByteConvertible };
 use std::error::Error;
 
 
@@ -10,7 +10,7 @@ const MIN_BYTES:usize = STORAGE_ARG_SIZE * STORAGE_ARG_COUNT;
 
 
 
-impl<T> Grid<T> where T:ByteConversion {
+impl<T> Grid<T> where T:GridByteConvertible {
 
 	/// Convert the grid to bytes.
 	pub fn to_bytes(&self) -> Vec<u8> {

@@ -11,7 +11,7 @@ mod file_conversion;
 #[cfg(feature="file_storage")]
 mod file_conversion_u;
 #[cfg(feature="file_storage")]
-pub(crate) use byte_conversion_t::ByteConversion;
+pub use byte_conversion_t::GridByteConvertible;
 
 
 #[cfg(feature="png_conversion")]
