@@ -1,10 +1,10 @@
 use image::{ io::Reader, ImageBuffer, Rgba, RgbaImage };
 use std::{ error::Error, path::Path };
-use crate::{ Grid, ColorConvertable, Color };
+use crate::{ Grid, ColorConvertible, Color };
 
 
 
-impl<T> Grid<T> where T:ColorConvertable {
+impl<T> Grid<T> where T:ColorConvertible {
 
 	/// Read from png file.
 	pub fn from_png(path:&str) -> Result<Grid<T>, Box<dyn Error>> {

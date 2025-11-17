@@ -88,7 +88,7 @@ impl Image {
 		}
 	}
 }
-impl<T> Grid<T> where T:ColorConvertable {
+impl<T> Grid<T> where T:ColorConvertible {
 
 	/// Convert the grid to an image.
 	pub fn to_image(&self) -> Image {
@@ -105,7 +105,7 @@ impl Color {
 	/* CONSTRUCTOR METHODS */
 
 	/// Create a new 0xAARRGGBB color.
-	pub fn new<T>(source:T) -> Color where T:ColorConvertable {
+	pub fn new<T>(source:T) -> Color where T:ColorConvertible {
 		source.to_color()
 	}
 
@@ -180,7 +180,7 @@ impl Debug for Color {
 		write!(f, "{:#010x}", self.0)
 	}
 }
-pub trait ColorConvertable {
+pub trait ColorConvertible {
 
 	/// Convert the value to a 0xAARRGGBB color.
 	fn to_color(&self) -> Color;
@@ -188,7 +188,7 @@ pub trait ColorConvertable {
 	/// Convert from color to self.
 	fn from_color(color:Color) -> Self;
 }
-impl ColorConvertable for Color {
+impl ColorConvertible for Color {
 	fn to_color(&self) -> Color {
 		*self
 	}
@@ -196,7 +196,7 @@ impl ColorConvertable for Color {
 		color
 	}
 }
-impl ColorConvertable for u32 {
+impl ColorConvertible for u32 {
 	fn to_color(&self) -> Color {
 		Color(*self)
 	}
@@ -204,7 +204,7 @@ impl ColorConvertable for u32 {
 		color.0
 	}
 }
-impl ColorConvertable for u8 {
+impl ColorConvertible for u8 {
 	fn to_color(&self) -> Color {
 		Color(u32::from_be_bytes([0xFF, *self, *self, *self]))
 	}
@@ -212,7 +212,7 @@ impl ColorConvertable for u8 {
 		color.shade()
 	}
 }
-impl ColorConvertable for bool {
+impl ColorConvertible for bool {
 	fn to_color(&self) -> Color {
 		Color(if *self { 0xFF00FF00 } else { 0x00000000 })
 	}
@@ -220,7 +220,7 @@ impl ColorConvertable for bool {
 		color.0 != 0x000000
 	}
 }
-impl ColorConvertable for [u8; 4] {
+impl ColorConvertible for [u8; 4] {
 	fn to_color(&self) -> Color {
 		Color(u32::from_be_bytes(*self))
 	}

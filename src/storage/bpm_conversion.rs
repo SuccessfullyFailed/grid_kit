@@ -1,6 +1,6 @@
 use bytes_parser::BytesParser;
 
-use crate::{ Color, ColorConvertable, Grid };
+use crate::{ Color, ColorConvertible, Grid };
 use std::{ error::Error, fs, path::Path };
 
 
@@ -12,7 +12,7 @@ const BMP_INFO_HEADER_SIZE:u32 = 40;
 
 
 
-impl<T> Grid<T> where T:ColorConvertable {
+impl<T> Grid<T> where T:ColorConvertible {
 
 	/// Read a grid from a BPM file.
 	pub fn from_bpm(file_path:&str) -> Result<Grid<T>, Box<dyn Error>> {
