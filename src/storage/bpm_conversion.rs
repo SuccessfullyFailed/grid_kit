@@ -1,7 +1,6 @@
-use bytes_parser::BytesParser;
-
 use crate::{ Color, ColorConvertible, Grid };
 use std::{ error::Error, fs, path::Path };
+use bytes_parser::BytesParser;
 
 
 
@@ -65,13 +64,24 @@ impl<T> Grid<T> where T:ColorConvertible {
 			return Err("Image color data was not at expected location.".into());
 		}
 		let mut colors:Vec<Vec<Color>> = Vec::new();
-		match bytes_per_pixel {
-			4 => {
+		match bits_per_pixel {
+			32 => {
 				for _y in 0..height {
 					let mut row:Vec<Color> = Vec::with_capacity((width * bytes_per_pixel as u32) as usize);
 					for _x in 0..width {
 						let bbggrraa:[u8; 4] = parser.take()?;
 						row.push(Color::new(u32::from_be_bytes([bbggrraa[3], bbggrraa[2], bbggrraa[1], bbggrraa[0]])));
+					}
+					colors.push(row);
+					parser.skip(row_padding as usize);
+				}
+			},
+			24 => {
+				for _y in 0..height {
+					let mut row:Vec<Color> = Vec::with_capacity((width * bytes_per_pixel as u32) as usize);
+					for _x in 0..width {
+						let bbggrr:[u8; 3] = parser.take()?;
+						row.push(Color::new(u32::from_be_bytes([0xFF, bbggrr[2], bbggrr[1], bbggrr[0]])));
 					}
 					colors.push(row);
 					parser.skip(row_padding as usize);
