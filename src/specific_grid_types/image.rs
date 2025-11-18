@@ -105,7 +105,7 @@ impl Color {
 	/* CONSTRUCTOR METHODS */
 
 	/// Create a new 0xAARRGGBB color.
-	pub fn new<T>(source:T) -> Color where T:ColorConvertible {
+	pub fn new<T>(source:T) -> Color where T:ColorConvertible + Send + Sync + 'static {
 		source.to_color()
 	}
 
@@ -180,7 +180,7 @@ impl Debug for Color {
 		write!(f, "{:#010x}", self.0)
 	}
 }
-pub trait ColorConvertible {
+pub trait ColorConvertible:Send + Sync + 'static {
 
 	/// Convert the value to a 0xAARRGGBB color.
 	fn to_color(&self) -> Color;
