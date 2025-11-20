@@ -28,20 +28,12 @@ impl<T> Grid<T> where T:Clone {
 
 	/// Take a sub-section of this grid.
 	pub fn take(&self, bounds:[usize; 4]) -> Grid<T> {
-		let bounds:[usize; 4] = [
-			bounds[0],
-			bounds[1],
-			(bounds[2] - bounds[0]).min(self.width - bounds[0]),
-			(bounds[3] - bounds[1]).min(self.height - bounds[1])
-		];
-		
 		let mut sub_data:Vec<T> = Vec::new();
 		for y in bounds[1]..bounds[1] + bounds[3] {
 			for x in bounds[0]..bounds[0] + bounds[2] {
 				sub_data.push(self.data[y * self.width + x].clone());
 			}
 		}
-
 		Grid::new(sub_data, bounds[2], bounds[3])
 	}
 }
