@@ -149,8 +149,9 @@ impl<T> Grid<T> where T:PartialEq {
 		}
 
 		// Get similarity.
+		let comparing_pixel_count:usize = mask.positive_ranges().iter().map(|range| range.end - range.start).sum();
 		let matches:usize = mask.positive_ranges().iter().map(|range| range.clone().filter(|&index| self[index] == other[index]).count()).sum();
-		matches as f32 / self.data.len() as f32
+		matches as f32 / comparing_pixel_count as f32
 	}
 
 
