@@ -23,17 +23,19 @@ impl<T> Grid<T> {
 	pub fn full_sub_grid(&self) -> Grid<&T> {
 		self.sub_grid([0, 0, self.width, self.height])
 	}
-}
-impl<T> Grid<T> where T:Clone {
 
-	/// Take a sub-section of this grid.
-	pub fn take(&self, bounds:[usize; 4]) -> Grid<T> {
-		let mut sub_data:Vec<T> = Vec::new();
-		for y in bounds[1]..bounds[1] + bounds[3] {
-			for x in bounds[0]..bounds[0] + bounds[2] {
-				sub_data.push(self.data[y * self.width + x].clone());
-			}
+	/// Take a specific sub-field of self.
+	pub fn take(mut self, bounds:[usize; 4]) -> Grid<T> {
+		let mut new_data:Vec<Vec<T>> = Vec::with_capacity(bounds[3]);
+		for row_index in (bounds[1]..bounds[1] + bounds[3]).rev() {
+			let data_start:usize = row_index * self.width + bounds[0];
+			new_data.push(self.data.drain(data_start..data_start + bounds[2]).collect());
 		}
-		Grid::new(sub_data, bounds[2], bounds[3])
+
+		Grid::new(
+			new_data.into_iter().rev().flatten().collect(),
+			bounds[2],
+			bounds[3]
+		)
 	}
 }
