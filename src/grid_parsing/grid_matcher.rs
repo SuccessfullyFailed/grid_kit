@@ -3,7 +3,7 @@ use crate::{ Grid, GridMask };
 
 
 pub struct GridMatcher<SourceType:PartialEq + Default, TargetType:PartialEq> {
-	filter:Box<dyn Fn(SourceType) -> TargetType + 'static>,
+	filter:Box<dyn Fn(SourceType) -> TargetType + Send  + Sync + 'static>,
 	area_of_interest:Option<[usize; 4]>,
 	mask:Option<GridMask>,
 	named_entries:Vec<(String, Grid<TargetType>)>
@@ -13,7 +13,7 @@ impl<SourceType:PartialEq + Default, TargetType:PartialEq> GridMatcher<SourceTyp
 	/* CONSTRUCTOR METHODS */
 
 	/// Create a new grid-matcher.
-	pub fn new<Filter:Fn(SourceType) -> TargetType + 'static>(filter:Filter) -> GridMatcher<SourceType, TargetType> {
+	pub fn new<Filter:Fn(SourceType) -> TargetType + Send  + Sync + 'static>(filter:Filter) -> GridMatcher<SourceType, TargetType> {
 		GridMatcher {
 			filter: Box::new(filter),
 			area_of_interest: None,
