@@ -202,12 +202,12 @@ impl<SourceType:PartialEq + Default + ColorConvertible, TargetType:PartialEq + G
 
 	/// Get the cache path for a source file.
 	fn cache_for_source(&self, source:&FileRef) -> FileRef {
-		self.cache_dir.clone() + "/" + source.name() + "." + Self::CACHE_FILE_EXTENSION
+		self.cache_dir.clone() + "/" + source.file_name_no_extension().trim() + "." + Self::CACHE_FILE_EXTENSION
 	}
 
 	/// Get the debug path for a source file.
 	fn debug_for_source(&self, source:&FileRef) -> FileRef {
-		self.cache_dir.clone() + "/" + source.name() + "_debug." + Self::DEBUG_FILE_EXTENSION
+		self.cache_dir.clone() + "/" + source.file_name_no_extension().trim() + "_debug." + Self::DEBUG_FILE_EXTENSION
 	}
 
 
