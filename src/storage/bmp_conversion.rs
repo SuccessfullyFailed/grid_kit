@@ -13,12 +13,12 @@ const BMP_INFO_HEADER_SIZE:u32 = 40;
 
 impl<T> Grid<T> where T:ColorConvertible {
 
-	/// Read a grid from a BPM file.
-	pub fn from_bpm(file_path:&str) -> Result<Grid<T>, Box<dyn Error>> {
+	/// Read a grid from a BMP file.
+	pub fn from_bmp(file_path:&str) -> Result<Grid<T>, Box<dyn Error>> {
 		if !Path::new(file_path).exists() {
 			return Err("File does not exist.".into());
 		}
-		Grid::from_bpm_bytes(fs::read(file_path)?)
+		Grid::from_bmp_bytes(fs::read(file_path)?)
 	}
 
 	/// Store the grid as a BMP file.
@@ -27,20 +27,20 @@ impl<T> Grid<T> where T:ColorConvertible {
 		Ok(())
 	}
 
-	/// Read a grid from a BPM bytes list.
-	pub(crate) fn from_bpm_bytes(bytes:Vec<u8>) -> Result<Grid<T>, Box<dyn Error>> {
+	/// Read a grid from a BMP bytes list.
+	pub(crate) fn from_bmp_bytes(bytes:Vec<u8>) -> Result<Grid<T>, Box<dyn Error>> {
 		let mut parser:BytesParser = BytesParser::new(bytes, false);
 
 		// Parse file header.
 		if parser.take::<[u8; 2]>()? != BMP_FILE_SIGNATURE {
-			return Err("File does not include BPM file header signature.".into());
+			return Err("File does not include BMP file header signature.".into());
 		}
 		let _full_file_bytes_size:u32 = parser.take()?;
 		let _reserved_1:u16 = parser.take()?;
 		let _reserved_2:u16 = parser.take()?;
 		let pixel_data_offset:u32 = parser.take()?;
 
-		// Parse BPM info header.
+		// Parse BMP info header.
 		if parser.take::<u32>()? != BMP_INFO_HEADER_SIZE {
 			return Err("File contains incorrect BMP info header size.".into());
 		}

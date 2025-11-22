@@ -20,6 +20,6 @@ mod png_conversion;
 mod png_conversion_u;
 
 #[cfg(feature="bmp_conversion")]
-mod bpm_conversion;
+mod bmp_conversion;
 #[cfg(feature="bmp_conversion")]
 mod bmp_conversion_u;

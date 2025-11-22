@@ -26,7 +26,7 @@ mod tests {
 
 		// Convert grid to BMP bytes, then read it again.
 		let grid_as_bytes:Vec<u8> = original_grid.to_bmp_bytes();
-		let validation_grid:Grid<Color> = Grid::from_bpm_bytes(grid_as_bytes).unwrap();
+		let validation_grid:Grid<Color> = Grid::from_bmp_bytes(grid_as_bytes).unwrap();
 		println!("[validation grid]\n{validation_grid}\n");
 
 		// Compare grids.
