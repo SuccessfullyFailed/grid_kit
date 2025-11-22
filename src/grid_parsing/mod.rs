@@ -14,3 +14,6 @@ mod pathing_u;
 pub use masks::GridMask;
 pub use region::GridRegion;
 pub use grid_matcher::GridMatcher;
+#[cfg(feature="file_storage")]
+#[cfg(feature="png_conversion")]
+pub use grid_matcher::CachedGridMatcher;

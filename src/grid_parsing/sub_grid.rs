@@ -26,6 +26,9 @@ impl<T> Grid<T> {
 
 	/// Take a specific sub-field of self.
 	pub fn take(mut self, bounds:[usize; 4]) -> Grid<T> {
+		assert!(bounds[0] + bounds[2] <= self.width, "Trying to take width from image that is bigger than image width.");
+		assert!(bounds[1] + bounds[3] <= self.height, "Trying to take height from image that is bigger than image height.");
+		
 		let mut new_data:Vec<Vec<T>> = Vec::with_capacity(bounds[3]);
 		for row_index in (bounds[1]..bounds[1] + bounds[3]).rev() {
 			let data_start:usize = row_index * self.width + bounds[0];
