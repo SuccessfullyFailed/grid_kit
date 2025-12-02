@@ -1,4 +1,4 @@
-use crate::{ Color, ColorConvertible, Grid };
+use crate::{ Color, ColorConvertible, Grid, ImageConversion };
 use std::{ error::Error, fs, path::Path };
 use bytes_parser::BytesParser;
 
@@ -142,5 +142,25 @@ impl<T> Grid<T> where T:ColorConvertible {
 
 		// Full list of bytes.
 		vec![file_info_header, bitmap_info_header, image_data].into_iter().flatten().flatten().collect::<Vec<u8>>()
+	}
+}
+
+
+pub struct BmpConversion;
+impl ImageConversion for BmpConversion {
+
+	/// The file extension required for conversion.
+	fn file_extension() -> &'static str {
+		"bmp"
+	}
+
+	/// Read an image from a file.
+	fn image_from_file<T:ColorConvertible>(path:&str) -> Result<Grid<T>, Box<dyn Error>> {
+		Grid::from_bmp(path)
+	}
+
+	/// Write an image to a file.
+	fn image_to_file<T:ColorConvertible>(image:Grid<T>, path:&str) -> Result<(), Box<dyn Error>> {
+		image.to_bmp(path)
 	}
 }

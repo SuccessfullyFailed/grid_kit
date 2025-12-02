@@ -102,40 +102,35 @@ impl<SourceType:PartialEq + Default, TargetType:PartialEq> GridMatcher<SourceTyp
 
 
 #[cfg(feature="file_storage")]
-#[cfg(feature="png_conversion")]
 use file_ref::FileRef;
 #[cfg(feature="file_storage")]
-#[cfg(feature="png_conversion")]
-use crate::{ ColorConvertible, GridByteConvertible };
+use crate::{ ColorConvertible, GridByteConvertible, ImageConversion };
 #[cfg(feature="file_storage")]
-#[cfg(feature="png_conversion")]
 use std::error::Error;
 #[cfg(feature="file_storage")]
-#[cfg(feature="png_conversion")]
-pub struct CachedGridMatcher<SourceType:PartialEq + Default, TargetType:PartialEq + GridByteConvertible> {
+pub struct CachedGridMatcher<SourceType:PartialEq + Default, TargetType:PartialEq + GridByteConvertible, Converter:ImageConversion> {
 	source_dir:FileRef,
 	cache_dir:FileRef,
 	grid_matcher:GridMatcher<SourceType, TargetType>,
+	_converter:Option<Converter>
 }
 #[cfg(feature="file_storage")]
-#[cfg(feature="png_conversion")]
-impl<SourceType:PartialEq + Default + ColorConvertible, TargetType:PartialEq + GridByteConvertible + Default + ColorConvertible> CachedGridMatcher<SourceType, TargetType> {
+impl<SourceType:PartialEq + Default + ColorConvertible, TargetType:PartialEq + GridByteConvertible + Default + ColorConvertible, Converter:ImageConversion> CachedGridMatcher<SourceType, TargetType, Converter> {
 	const CACHE_DIR_NAME:&str = "_grid_matcher_cache";
-	const SOURCE_FILE_EXTENSION:&str = "png";
 	const CACHE_FILE_EXTENSION:&str = "gmc";
-	const DEBUG_FILE_EXTENSION:&str = "png";
 
 
 
 	/* CONSTRUCTOR METHODS */
 
 	/// Create a new cached grid-matcher.
-	pub fn new(source_dir:&str, force_update_all:bool, grid_matcher:GridMatcher<SourceType, TargetType>) -> Result<CachedGridMatcher<SourceType, TargetType>, Box<dyn Error>> {
+	pub fn new(source_dir:&str, force_update_all:bool, grid_matcher:GridMatcher<SourceType, TargetType>) -> Result<CachedGridMatcher<SourceType, TargetType, Converter>, Box<dyn Error>> {
 		let source_dir:FileRef = FileRef::new(source_dir);
-		let mut cached_matcher:CachedGridMatcher<SourceType, TargetType> = CachedGridMatcher {
+		let mut cached_matcher:CachedGridMatcher<SourceType, TargetType, Converter> = CachedGridMatcher {
 			source_dir: source_dir.clone(),
 			cache_dir: source_dir + "/" + Self::CACHE_DIR_NAME,
-			grid_matcher
+			grid_matcher,
+			_converter: None
 		};
 
 		// Remove existing cache if force-updating or cache is outdated.
@@ -192,7 +187,7 @@ impl<SourceType:PartialEq + Default + ColorConvertible, TargetType:PartialEq + G
 
 	/// Get all source files.
 	fn source_files(&self) -> Vec<FileRef> {
-		self.source_dir.scanner().include_files().filter(|file| file.extension() == Some(Self::SOURCE_FILE_EXTENSION)).collect()
+		self.source_dir.scanner().include_files().filter(|file| file.extension() == Some(Converter::file_extension())).collect()
 	}
 
 	/// Get all source files.
@@ -207,7 +202,7 @@ impl<SourceType:PartialEq + Default + ColorConvertible, TargetType:PartialEq + G
 
 	/// Get the debug path for a source file.
 	fn debug_for_source(&self, source:&FileRef) -> FileRef {
-		self.cache_dir.clone() + "/" + source.file_name_no_extension().trim() + "_debug." + Self::DEBUG_FILE_EXTENSION
+		self.cache_dir.clone() + "/" + source.file_name_no_extension().trim() + "_debug." + Converter::file_extension()
 	}
 
 
@@ -223,7 +218,7 @@ impl<SourceType:PartialEq + Default + ColorConvertible, TargetType:PartialEq + G
 	fn create_cache_file_for(&self, source:&FileRef) -> Result<(), Box<dyn Error>> {
 
 		// Create cache.
-		let image:Grid<SourceType> = Grid::from_png(source.path())?;
+		let image:Grid<SourceType> = Converter::image_from_file(source.path())?;
 		let aoi:Grid<SourceType> = match &self.grid_matcher.area_of_interest {
 			Some(aoi) => image.take(*aoi),
 			None => image
@@ -237,7 +232,7 @@ impl<SourceType:PartialEq + Default + ColorConvertible, TargetType:PartialEq + G
 		let cache_file:FileRef = self.cache_for_source(&source);
 		let debug_file:FileRef = self.debug_for_source(&source);
 		filtered_aoi.save_to_file(cache_file.path())?;
-		filtered_aoi.to_png(debug_file.path())?;
+		Converter::image_to_file(filtered_aoi, debug_file.path())?;
 
 		// Return success.
 		Ok(())

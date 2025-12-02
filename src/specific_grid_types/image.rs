@@ -1,4 +1,4 @@
-use std::fmt::{ Debug, Display };
+use std::{ error::Error, fmt::{ Debug, Display } };
 use crate::Grid;
 
 
@@ -227,4 +227,18 @@ impl ColorConvertible for [u8; 4] {
 	fn from_color(color:Color) -> Self {
 		color.0.to_be_bytes()
 	}
+}
+
+
+
+pub trait ImageConversion {
+
+	/// The file extension required for conversion.
+	fn file_extension() -> &'static str;
+
+	/// Read an image from a file.
+	fn image_from_file<T:ColorConvertible>(path:&str) -> Result<Grid<T>, Box<dyn Error>>;
+
+	/// Write an image to a file.
+	fn image_to_file<T:ColorConvertible>(image:Grid<T>, path:&str) -> Result<(), Box<dyn Error>>;
 }

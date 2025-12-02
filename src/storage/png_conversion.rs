@@ -1,6 +1,6 @@
 use image::{ io::Reader, ImageBuffer, Rgba, RgbaImage };
 use std::{ error::Error, path::Path };
-use crate::{ Grid, ColorConvertible, Color };
+use crate::{ Grid, ColorConvertible, Color, ImageConversion };
 
 
 
@@ -27,5 +27,25 @@ impl<T> Grid<T> where T:ColorConvertible {
 		}
 		img.save(file_path)?;
 		Ok(())
+	}
+}
+
+
+pub struct PngConversion;
+impl ImageConversion for PngConversion {
+
+	/// The file extension required for conversion.
+	fn file_extension() -> &'static str {
+		"png"
+	}
+
+	/// Read an image from a file.
+	fn image_from_file<T:ColorConvertible>(path:&str) -> Result<Grid<T>, Box<dyn Error>> {
+		Grid::from_png(path)
+	}
+
+	/// Write an image to a file.
+	fn image_to_file<T:ColorConvertible>(image:Grid<T>, path:&str) -> Result<(), Box<dyn Error>> {
+		image.to_png(path)
 	}
 }
