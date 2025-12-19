@@ -1,4 +1,6 @@
-use crate::{ Grid, GridMask };
+use crate::{ ColorConvertible, Grid, GridByteConvertible, GridMask, ImageConversion };
+use file_ref::FileRef;
+use std::error::Error;
 
 
 
@@ -101,20 +103,12 @@ impl<SourceType:PartialEq + Default, TargetType:PartialEq> GridMatcher<SourceTyp
 
 
 
-#[cfg(feature="file_storage")]
-use file_ref::FileRef;
-#[cfg(feature="file_storage")]
-use crate::{ ColorConvertible, GridByteConvertible, ImageConversion };
-#[cfg(feature="file_storage")]
-use std::error::Error;
-#[cfg(feature="file_storage")]
 pub struct CachedGridMatcher<SourceType:PartialEq + Default, TargetType:PartialEq + GridByteConvertible, Converter:ImageConversion> {
 	source_dir:FileRef,
 	cache_dir:FileRef,
 	grid_matcher:GridMatcher<SourceType, TargetType>,
 	_converter:Option<Converter>
 }
-#[cfg(feature="file_storage")]
 impl<SourceType:PartialEq + Default + ColorConvertible, TargetType:PartialEq + GridByteConvertible + Default + ColorConvertible, Converter:ImageConversion> CachedGridMatcher<SourceType, TargetType, Converter> {
 	const CACHE_DIR_NAME:&str = "_grid_matcher_cache";
 	const CACHE_FILE_EXTENSION:&str = "gmc";
