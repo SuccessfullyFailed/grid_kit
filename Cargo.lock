@@ -41,7 +41,7 @@ checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 [[package]]
 name = "bytes_parser"
 version = "0.1.0"
-source = "git+https://github.com/SuccessfullyFailed/bytes_parser#2849d2063ed6e21bd4de6d4044bd14dbd72a93df"
+source = "git+https://github.com/SuccessfullyFailed/bytes_parser#bcf071b41b39bbf14e03ced17588749e2ae77b41"
 
 [[package]]
 name = "cfg-if"
@@ -108,7 +108,7 @@ checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 [[package]]
 name = "file_ref"
 version = "0.1.2"
-source = "git+https://github.com/SuccessfullyFailed/file_ref#db4f7a08a8c2967563775bed2436ab6dc355116c"
+source = "git+https://github.com/SuccessfullyFailed/file_ref#f878a277e98390e0e078c484d70a74b4563178e3"
 
 [[package]]
 name = "gif"
@@ -267,6 +267,6 @@ dependencies = [
 
 [[package]]
 name = "weezl"
-version = "0.1.10"
+version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a751b3277700db47d3e574514de2eced5e54dc8a5436a3bf7a0b248b2cee16f3"
+checksum = "a28ac98ddc8b9274cb41bb4d9d4d5c425b6020c50c46f25559911905610b4a88"
