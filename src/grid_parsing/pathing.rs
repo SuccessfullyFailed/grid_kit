@@ -1,4 +1,6 @@
 use std::{ error::Error, ops::Add };
+use urge_prique::WeighedPriorityQueue;
+
 use crate::{ Grid, GridIndexer };
 use super::GridRegion;
 
@@ -82,8 +84,8 @@ impl<T> Grid<T> where T:PartialEq {
 impl<T> Grid<T> {
 
 	// Find a path from one index to another. Will only move over pixels that are equal to the starting pixel.
-	pub fn find_path_weighed<U, V, W, X>(&self, start:U, end:V, weight_function:W) -> Result<Vec<[usize; 2]>, Box<dyn Error>> where U:GridIndexer, V:GridIndexer, W:Fn((usize, &T), (usize, &T)) -> Option<X>, X:Ord + Add<Output=X> + Clone + Default {
-
+	pub fn find_path_weighed<U, V, W, X>(&self, start:U, end:V, weight_function:W) -> Result<Vec<[usize; 2]>, Box<dyn Error>> where U:GridIndexer, V:GridIndexer, W:Fn((usize, &T), (usize, &T)) -> Option<X>, X:Ord + Add<Output=X> + Clone + Copy + Default {	
+		
 		// Find and validate start and end.
 		let start_index:usize = start.to_grid_index(self);
 		let end_index:usize = end.to_grid_index(self);
@@ -98,14 +100,17 @@ impl<T> Grid<T> {
 
 		// Keep checking positions in the queue.
 		let mut origin_grid:Grid<Option<(usize, X)>> = Grid::new(vec![None; self.width * self.height], self.width, self.height); // For each node, keep the origin and value of total weight to get here.
-		origin_grid[start_index] = Some((start_index, X::default()));
-		let mut queue:Vec<(usize, X)> = Vec::with_capacity(self.width * self.height); // Has a lot of space, likely too much. Stops it from moving around in memory when growing.
-		queue.push((start_index, X::default()));
-		let mut queue_cursor:usize = 0; // Keep a cursor to prevent moving the entire queue through memory on resizing.
-		while queue_cursor < queue.len() {
-			let (current_index, current_weight) = &queue[queue_cursor];
-			let current_index:usize = *current_index;
+		let mut queue:WeighedPriorityQueue<X, (usize, usize, X, &T)> = WeighedPriorityQueue::new(|data:&(usize, usize, X, &T)| data.2);
+		queue.push((start_index, start_index, X::default(), &self[start_index]));
+		while let Some((current_index, origin_index, current_weight, current_value)) = queue.pop() {
 
+			// Skip this field if it was already taken, otherwise claim it.
+			if origin_grid[current_index].is_some() {
+				continue;
+			} else {
+				origin_grid[current_index] = Some((origin_index, current_weight));
+			}
+			
 			// If end found, backtrack and return path.
 			if current_index == end_index {
 				let mut path_indexes:Vec<usize> = vec![current_index];
@@ -124,25 +129,16 @@ impl<T> Grid<T> {
 			}
 
 			// Add neighbors to queue.
-			let current_value:&T = &self[current_index];
-			let mut queue_additions:Vec<(usize, X)> = Vec::with_capacity(4);
 			for neighbor_index in self._index_neighbors(current_index, max_x, max_y) {
-				if self.index_is_valid(neighbor_index) {
+				if self.index_is_valid(neighbor_index) && origin_grid[neighbor_index].is_none() {
 					let neighbor_value:&T = &self[neighbor_index];
 					if let Some(weight_addition_to_neighbor) = weight_function((current_index, current_value), (neighbor_index, neighbor_value)) {
-						let value_to_neighbor:X = current_weight.clone() + weight_addition_to_neighbor;
-						let current_neighbor_origin:&Option<(usize, X)> = &origin_grid[neighbor_index];
-						if current_neighbor_origin.is_none() || (current_neighbor_origin.as_ref().unwrap().0 != current_index && value_to_neighbor < current_neighbor_origin.as_ref().unwrap().1) {
-							origin_grid[neighbor_index] = Some((current_index, value_to_neighbor.clone()));
-							queue_additions.push((neighbor_index, value_to_neighbor));
-						}
+						println!("\t+ {:?}", self.index_to_xy(neighbor_index));
+						let neighbor_weight:X = current_weight.clone() + weight_addition_to_neighbor;
+						queue.push((neighbor_index, current_index, neighbor_weight, neighbor_value));
 					}
 				}
 			}
-			queue.extend(queue_additions);
-
-			// Move cursor to next item.
-			queue_cursor += 1;
 		}
 
 		// No path was found.
