@@ -76,7 +76,7 @@ impl Font {
 					"head" => {
 						table_parser.skip(0x12);
 						units_per_em = table_parser.take()?;
-						table_parser.skip(0x10);
+						table_parser.skip(0x1E);
 						loca_format = table_parser.take()?;
 					},
 					"maxp" => {
