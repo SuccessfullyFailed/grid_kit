@@ -1,10 +1,18 @@
-use std::{ error::Error, fmt::{ Debug, Display } };
+use std::{ error::Error, fmt::{ Debug, Display }, ops::{Add, AddAssign} };
 use crate::Grid;
 
 
 
+const BYTE_MAX_F32:f32 = 0xFF as f32;
+
+
+
+pub type Image = Grid<Color>;
+
+
+
 #[derive(Clone, Copy, PartialEq, Default)]
-pub struct Color(pub u32);
+pub struct Color(pub u32); // 0xAARRGGBB.
 impl Color {
 
 	/* CONSTRUCTOR METHODS */
@@ -85,6 +93,52 @@ impl Debug for Color {
 		write!(f, "{:#010x}", self.0)
 	}
 }
+impl<T:ColorConvertible> Add<T> for Color {
+	type Output = Color;
+
+	fn add(self, rhs:T) -> Self::Output {
+		let rhs:Color  = rhs.to_color();
+
+		// Edge cases that require no merging.
+		let rhs_opacity:u32 = rhs.0 >> 24;
+		if rhs_opacity == 0xFF {
+			return rhs;
+		}
+		if rhs_opacity == 0 {
+			return self;
+		}
+		let self_opacity:u32 = self.0 >> 24;
+		if self_opacity == 0 {
+			return rhs;
+		}
+
+		// Calculate combined opacity factor.
+		let self_opacity:f32 = self_opacity as f32 / BYTE_MAX_F32;
+		let rhs_opacity:f32 = rhs_opacity as f32 / BYTE_MAX_F32;
+		let rhs_opacity_neg:f32 = 1.0 - rhs_opacity;
+		let bg_alpha_factor:f32 = self_opacity * rhs_opacity_neg;
+
+		// Combine colors into new color using porter-duff "over".
+		let self_rgb:Vec<f32> = self.0.to_be_bytes()[1..].into_iter().map(|value| *value as f32 / BYTE_MAX_F32).collect();
+		let rhs_rgb:Vec<f32>= rhs.0.to_be_bytes()[1..].into_iter().map(|value| *value as f32 / BYTE_MAX_F32).collect();
+		Color::new(
+		[
+				rhs_opacity + bg_alpha_factor,
+				rhs_rgb[0] * rhs_opacity + self_rgb[0] * bg_alpha_factor,
+				rhs_rgb[1] * rhs_opacity + self_rgb[1] * bg_alpha_factor,
+				rhs_rgb[2] * rhs_opacity + self_rgb[2] * bg_alpha_factor
+			].map(|value| (value * BYTE_MAX_F32) as u8)
+		)
+	}
+}
+impl<T:ColorConvertible> AddAssign<T> for Color {
+	fn add_assign(&mut self, rhs:T) {
+		*self = *self + rhs;
+	}
+}
+
+
+
 pub trait ColorConvertible:Send + Sync + 'static {
 
 	/// Convert the value to a 0xAARRGGBB color.
