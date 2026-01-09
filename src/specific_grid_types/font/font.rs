@@ -74,6 +74,7 @@ impl Font {
 	/// Read a new font from a file.
 	pub fn new(ttf_file_path:&str) -> Result<Font, Box<dyn Error>> {
 		const SFNT_VERSION_TT:u32 = 0x00010000;
+		const HALF_I16_MAX_F32:f32 = 16384.0; 
 
 		// Read file and create parser.
 		let file_contents:Vec<u8> = FileRef::new(ttf_file_path).read_bytes()?;
@@ -218,25 +219,24 @@ impl Font {
 									// Read transform.
 									let transform:Transform = {
 										if has_two_by_two {
-											Transform::new(
-												glyph_parser.take::<i16>()? as f32 / 16384.0,
-												glyph_parser.take::<i16>()? as f32 / 16384.0,
-												glyph_parser.take::<i16>()? as f32 / 16384.0,
-												glyph_parser.take::<i16>()? as f32 / 16384.0,
+											Transform::new(glyph_parser.take::<i16>()? as f32 / HALF_I16_MAX_F32,
+												glyph_parser.take::<i16>()? as f32 / HALF_I16_MAX_F32,
+												glyph_parser.take::<i16>()? as f32 / HALF_I16_MAX_F32,
+												glyph_parser.take::<i16>()? as f32 / HALF_I16_MAX_F32,
 												translate_x,
 												translate_y
 											)
 										} else if has_x_and_y_scale {
 											Transform::new(
-												glyph_parser.take::<i16>()? as f32 / 16384.0,
+												glyph_parser.take::<i16>()? as f32 / HALF_I16_MAX_F32,
 												0.0,
 												0.0,
-												glyph_parser.take::<i16>()? as f32 / 16384.0,
+												glyph_parser.take::<i16>()? as f32 / HALF_I16_MAX_F32,
 												translate_x,
 												translate_y
 											)
 										} else if has_scale {
-											let scale:f32 = glyph_parser.take::<i16>()? as f32 / 16384.0;
+											let scale:f32 = glyph_parser.take::<i16>()? as f32 / HALF_I16_MAX_F32;
 											Transform::new(
 												scale,
 												0.0,
@@ -294,21 +294,9 @@ impl Font {
 								let mut current_x:i16 = 0;
 								for flag in &glyph_point_flags {
 									current_x += {
-
-										// 1-byte vector.
-										if flag & 0x02 != 0 {
-											(glyph_parser.take::<u8>()? as i16) * (if flag & 0x10 != 0 { 1 } else { -1 })
-										}
-										
-										// Same x as previous output.
-										else if flag & 0x10 != 0 {
-											0
-										}
-										
-										// 2-byte delta.
-										else {
-											glyph_parser.take()?
-										}
+										if flag & 0x02 != 0 { (glyph_parser.take::<u8>()? as i16) * (if flag & 0x10 != 0 { 1 } else { -1 }) } // 1-byte vector.
+										else if flag & 0x10 != 0 { 0 } // Same x as previous output.
+										else { glyph_parser.take()? } // 2-byte delta.
 									};
 									x_coordinates.push(current_x);
 								}
@@ -318,21 +306,9 @@ impl Font {
 								let mut current_y:i16 = 0;
 								for flag in &glyph_point_flags {
 									current_y += {
-
-										// 1-byte vector.
-										if flag & 0x04 != 0 {
-											(glyph_parser.take::<u8>()? as i16) * (if flag & 0x20 != 0 { 1 } else { -1 })
-										}
-										
-										// Same y as previous output.
-										else if flag & 0x20 != 0 {
-											0
-										}
-										
-										// 2-byte delta.
-										else {
-											glyph_parser.take()?
-										}
+										if flag & 0x04 != 0 { (glyph_parser.take::<u8>()? as i16) * (if flag & 0x20 != 0 { 1 } else { -1 }) } // 1-byte vector.
+										else if flag & 0x20 != 0 { 0 } // Same y as previous output.
+										else { glyph_parser.take()? } // 2-byte delta.
 									};
 									y_coordinates.push(current_y);
 								}
