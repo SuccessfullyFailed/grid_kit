@@ -25,6 +25,43 @@ struct ContourPoint {
 
 
 
+#[derive(Clone)]
+struct Transform {
+	translate_x:f32,
+	translate_y:f32,
+	scale_x:f32,
+	scale_y:f32,
+	rotation_x_to_y:f32,
+	rotation_y_to_x:f32
+}
+impl Transform {
+	fn new(scale_x:f32, rotation_x_to_y:f32, rotation_y_to_x:f32, scale_y:f32, translate_x:f32, translate_y:f32) -> Transform {
+		Transform {
+			scale_x,
+			rotation_x_to_y,
+			rotation_y_to_x,
+			scale_y,
+			translate_x,
+			translate_y
+		}
+	}
+
+	fn apply(&self, p: &ContourPoint) -> ContourPoint {
+		ContourPoint {
+			x: (self.scale_x * p.x as f32 + self.rotation_y_to_x * p.y as f32 + self.translate_x).round() as i16,
+			y: (self.rotation_x_to_y * p.x as f32 + self.scale_y * p.y as f32 + self.translate_y).round() as i16,
+			on_curve: p.on_curve,
+		}
+	}
+}
+impl Default for Transform {
+	fn default() -> Self {
+		Transform::new(1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+	}
+}
+
+
+
 pub struct Font {
 	units_per_em:u16,
 	encoders:Vec<Box<dyn FontEncoder>>,
@@ -70,6 +107,7 @@ impl Font {
 		let mut glyph_offsets:Vec<usize> = Vec::new();
 		let mut encoders:Vec<Box<dyn FontEncoder>> = Vec::new();
 		let mut contours:Vec<(usize, Vec<Vec<ContourPoint>>)> = Vec::new();
+		let mut composites:Vec<(usize, Vec<(usize, Transform)>)> = Vec::new();
 		for target_tag in TABLE_PARSE_ORDER {
 			for (_, table_address, table_parser) in table_parsers.iter_mut().filter(|(tag, _, _)| tag == target_tag) {
 				match *target_tag {
@@ -132,6 +170,7 @@ impl Font {
 							if glyph_index < glyph_offsets.len() - 1 && glyph_offsets[glyph_index] == glyph_offsets[glyph_index + 1] {
 								continue;
 							}
+
 							let glyph_offset:usize = glyph_offsets[glyph_index];
 							let mut glyph_parser:BytesParser = BytesParser::new(file_contents[*table_address + glyph_offset..].to_vec(), true);
 							let contour_quantity:i16 = glyph_parser.take()?;
@@ -144,104 +183,201 @@ impl Font {
 							if contour_quantity == 0 {
 								continue;
 							}
-							// Skip composite glyphs for now.
+							
+							// Parse composite glyph.
 							if contour_quantity < 0 {
-								continue;
+								let mut components:Vec<(usize, Transform)> = Vec::new();
+								let mut have_instructions:bool = false;
+								let mut more_components:bool = true;
+								while more_components {
+									let flags:u16 = glyph_parser.take()?;
+									let glyph_index:u16 = glyph_parser.take()?;
+									let args_are_i16:bool = flags & 0x01 == 0x01;
+									let args_are_xy_value:bool = flags & 0x02 == 0x02;
+									let has_scale:bool = flags & 0x08 == 0x08;
+									let has_x_and_y_scale:bool = flags & 0x40 == 0x40;
+									let has_two_by_two:bool = flags & 0x80 == 0x80;
+									have_instructions |= flags & 0x0100 != 0;
+									more_components = flags & 0x20 == 0x20;
+
+									// Read arguments.
+									let (translate_x, translate_y) = {
+										if args_are_xy_value {
+											if args_are_i16 {
+												(glyph_parser.take::<i16>()? as f32, glyph_parser.take::<i16>()? as f32)
+											} else {
+												(glyph_parser.take::<i8>()? as f32, glyph_parser.take::<i8>()? as f32)
+											}
+										} else {
+											// Matched point numbers, ignore for now.
+											glyph_parser.skip(if args_are_i16 { 4 } else { 2 });
+											(0.0, 0.0)
+										}
+									};
+
+									// Read transform.
+									let transform:Transform = {
+										if has_two_by_two {
+											Transform::new(
+												glyph_parser.take::<i16>()? as f32 / 16384.0,
+												glyph_parser.take::<i16>()? as f32 / 16384.0,
+												glyph_parser.take::<i16>()? as f32 / 16384.0,
+												glyph_parser.take::<i16>()? as f32 / 16384.0,
+												translate_x,
+												translate_y
+											)
+										} else if has_x_and_y_scale {
+											Transform::new(
+												glyph_parser.take::<i16>()? as f32 / 16384.0,
+												0.0,
+												0.0,
+												glyph_parser.take::<i16>()? as f32 / 16384.0,
+												translate_x,
+												translate_y
+											)
+										} else if has_scale {
+											let scale:f32 = glyph_parser.take::<i16>()? as f32 / 16384.0;
+											Transform::new(
+												scale,
+												0.0,
+												0.0,
+												scale,
+												translate_x,
+												translate_y
+											)
+										} else {
+											Transform {
+												translate_x,
+												translate_y,
+												..Transform::default()
+											}
+										}
+									};
+									components.push((glyph_index as usize, transform));
+								}
+
+								// Ignore other instructions for now.
+								if have_instructions {
+									let instruction_len:u16 = glyph_parser.take()?;
+									glyph_parser.skip(instruction_len as usize);
+								}
+
+								composites.push((glyph_index, components));
 							}
 
-							// Parse instruction data.
-							let contour_end_point_indices:Vec<u16> = glyph_parser.take_many(contour_quantity as usize)?;
-							let instruction_byte_count:u16 = glyph_parser.take()?;
-							glyph_parser.skip(instruction_byte_count as usize);
+							// Parse non-composite glyph.
+							else {
 
-							// Get all the flags of this specific point.
-							let glyph_point_quantity:u16 = contour_end_point_indices.last().unwrap() + 1;
-							let mut glyph_point_flags:Vec<u8> = Vec::with_capacity(glyph_point_quantity as usize);
-							while glyph_point_flags.len() < glyph_point_quantity as usize {
-								let flag:u8 = glyph_parser.take()?;
-								glyph_point_flags.push(flag);
+								// Parse instruction data.
+								let contour_end_point_indices:Vec<u16> = glyph_parser.take_many(contour_quantity as usize)?;
+								let instruction_byte_count:u16 = glyph_parser.take()?;
+								glyph_parser.skip(instruction_byte_count as usize);
 
-								// If bit 3 is set, repeat the flag.
-								if flag & 0x08 != 0 {
-									let repeat_count:u8 = glyph_parser.take()?;
-									for _ in 0..repeat_count {
-										glyph_point_flags.push(flag);
+								// Get all the flags of this specific point.
+								let glyph_point_quantity:u16 = contour_end_point_indices.last().unwrap() + 1;
+								let mut glyph_point_flags:Vec<u8> = Vec::with_capacity(glyph_point_quantity as usize);
+								while glyph_point_flags.len() < glyph_point_quantity as usize {
+									let flag:u8 = glyph_parser.take()?;
+									glyph_point_flags.push(flag);
+
+									// If bit 3 is set, repeat the flag.
+									if flag & 0x08 != 0 {
+										let repeat_count:u8 = glyph_parser.take()?;
+										for _ in 0..repeat_count {
+											glyph_point_flags.push(flag);
+										}
 									}
 								}
-							}
 
-							// Get the X coordinates of all points.
-							let mut x_coordinates:Vec<i16> = Vec::with_capacity(glyph_point_quantity as usize);
-							let mut current_x:i16 = 0;
-							for flag in &glyph_point_flags {
-								current_x += {
+								// Get the X coordinates of all points.
+								let mut x_coordinates:Vec<i16> = Vec::with_capacity(glyph_point_quantity as usize);
+								let mut current_x:i16 = 0;
+								for flag in &glyph_point_flags {
+									current_x += {
 
-									// 1-byte vector.
-									if flag & 0x02 != 0 {
-										(glyph_parser.take::<u8>()? as i16) * (if flag & 0x10 != 0 { 1 } else { -1 })
-									}
-									
-									// Same x as previous output.
-									else if flag & 0x10 != 0 {
-										0
-									}
-									
-									// 2-byte delta.
-									else {
-										glyph_parser.take()?
-									}
+										// 1-byte vector.
+										if flag & 0x02 != 0 {
+											(glyph_parser.take::<u8>()? as i16) * (if flag & 0x10 != 0 { 1 } else { -1 })
+										}
+										
+										// Same x as previous output.
+										else if flag & 0x10 != 0 {
+											0
+										}
+										
+										// 2-byte delta.
+										else {
+											glyph_parser.take()?
+										}
+									};
+									x_coordinates.push(current_x);
+								}
+
+								// Get the Y coordinates of all points.
+								let mut y_coordinates:Vec<i16> = Vec::with_capacity(glyph_point_quantity as usize);
+								let mut current_y:i16 = 0;
+								for flag in &glyph_point_flags {
+									current_y += {
+
+										// 1-byte vector.
+										if flag & 0x04 != 0 {
+											(glyph_parser.take::<u8>()? as i16) * (if flag & 0x20 != 0 { 1 } else { -1 })
+										}
+										
+										// Same y as previous output.
+										else if flag & 0x20 != 0 {
+											0
+										}
+										
+										// 2-byte delta.
+										else {
+											glyph_parser.take()?
+										}
+									};
+									y_coordinates.push(current_y);
+								}
+
+								// Combine X and Y coordinates into contour points.
+								let contour_points:Vec<ContourPoint> = {
+									(0..glyph_point_quantity as usize).map(|point_index| 
+										ContourPoint {
+											x: x_coordinates[point_index],
+											y: y_coordinates[point_index],
+											on_curve: glyph_point_flags[point_index] & 0x01 != 0
+										}
+									).collect()
 								};
-								x_coordinates.push(current_x);
+
+								// Build contours list from contour points.
+								let mut glyph_contours:Vec<Vec<ContourPoint>> = Vec::new();
+								let mut start:usize = 0;
+								for end in contour_end_point_indices {
+									glyph_contours.push(contour_points[start..=end as usize].to_vec());
+									start = end as usize + 1;
+								}
+								contours.push((glyph_index, glyph_contours));
 							}
-
-							// Get the Y coordinates of all points.
-							let mut y_coordinates:Vec<i16> = Vec::with_capacity(glyph_point_quantity as usize);
-							let mut current_y:i16 = 0;
-							for flag in &glyph_point_flags {
-								current_y += {
-
-									// 1-byte vector.
-									if flag & 0x04 != 0 {
-										(glyph_parser.take::<u8>()? as i16) * (if flag & 0x20 != 0 { 1 } else { -1 })
-									}
-									
-									// Same y as previous output.
-									else if flag & 0x20 != 0 {
-										0
-									}
-									
-									// 2-byte delta.
-									else {
-										glyph_parser.take()?
-									}
-								};
-								y_coordinates.push(current_y);
-							}
-
-							// Combine X and Y coordinates into contour points.
-							let contour_points:Vec<ContourPoint> = {
-								(0..glyph_point_quantity as usize).map(|point_index| 
-									ContourPoint {
-										x: x_coordinates[point_index],
-										y: y_coordinates[point_index],
-										on_curve: glyph_point_flags[point_index] & 0x01 != 0
-									}
-								).collect()
-							};
-
-							// Build contours list from contour points.
-							let mut glyph_contours:Vec<Vec<ContourPoint>> = Vec::new();
-							let mut start:usize = 0;
-							for end in contour_end_point_indices {
-								glyph_contours.push(contour_points[start..=end as usize].to_vec());
-								start = end as usize + 1;
-							}
-							contours.push((glyph_index, glyph_contours));
 						}
 					}
 					_ => {}
 				}
 			}
+		}
+
+		// Combine composites into contours.
+		for (glyph_id, glyph_references) in composites {
+			contours.push((
+				glyph_id,
+				glyph_references.into_iter().map(|(sub_glyph_id, transform)| {
+					contours.iter().find(|(id, _)| *id == sub_glyph_id).map(|(_, sub_contours)|
+						sub_contours.iter().map(|sub_contour|
+							sub_contour.iter().map(|point|
+								transform.apply(point)
+							).collect::<Vec<ContourPoint>>()
+						).collect::<Vec<Vec<ContourPoint>>>()
+					)
+				}).flatten().flatten().collect()
+			));
 		}
 
 		// Return font.
@@ -287,20 +423,21 @@ impl Font {
 
 		// Get contours for character.
 		let glyph_id:usize = self.encoders.iter().find_map(|e| e.glyph_id_for_char(character)).unwrap_or(0) as usize;
-		let contours:&Vec<Vec<ContourPoint>> = match self.contours.iter().find(|(id, _)| *id == glyph_id) {
-			Some((_, contours)) => contours,
-			None => return Grid::new(vec![false; line_height * line_height], line_height, line_height)
-		};
+		match self.contours.iter().find(|(id, _)| *id == glyph_id) {
+			Some((_, contours)) => {
 
-		// Create a list of lines from the contours.
-		let scale:f32 = line_height as f32 / self.units_per_em as f32;
-		let mut lines:Vec<Line> = Vec::new();
-		for contour in contours {
-			Self::contour_points_to_edges(contour, scale, &mut lines);
+				// Create a list of lines from the contours.
+				let scale:f32 = line_height as f32 / self.units_per_em as f32;
+				let mut lines:Vec<Line> = Vec::new();
+				for contour in contours {
+					Self::contour_points_to_edges(contour, scale, &mut lines);
+				}
+
+				// Fill the outlines, creating a character grid.
+				Self::outlines_to_pixels(line_height, &lines)
+			},
+			None => Grid::default()
 		}
-
-		// Fill the outlines, creating a character grid.
-		Self::outlines_to_pixels(line_height, &lines)
 	}
 
 
