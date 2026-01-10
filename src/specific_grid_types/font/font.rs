@@ -371,7 +371,7 @@ impl Font {
 	/* USAGE METHODS */
 
 	/// Render a string to a list of characters as a 2D list of pixels.
-	pub fn draw_str(&self, str:&str, line_height:usize) -> Grid<Grid<bool>> {
+	pub fn draw_str(&self, str:&str, line_height:usize) -> Grid<Grid<f32>> {
 
 		// Split string into lines.
 		let lines:Vec<Vec<char>> = str.split('\n').map(|line| line.chars().collect::<Vec<char>>()).collect();
@@ -387,7 +387,7 @@ impl Font {
 					} else {
 						Grid::new(Vec::new(), 0, 0)
 					}
-				).collect::<Vec<Grid<bool>>>()
+				).collect::<Vec<Grid<f32>>>()
 			).flatten().collect(),
 			max_line_size,
 			line_count
@@ -395,7 +395,7 @@ impl Font {
 	}
 
 	/// Render a character to a grid of pixels.
-	pub fn draw_char(&self, character:char, line_height:usize) -> Grid<bool> {
+	pub fn draw_char(&self, character:char, line_height:usize) -> Grid<f32> {
 
 		// Get contours for character.
 		let glyph_id:usize = self.encoders.iter().find_map(|e| e.glyph_id_for_char(character)).unwrap_or(0) as usize;
@@ -443,11 +443,16 @@ impl Font {
 			}
 			
 			// If not both of the points are along a curve, draw a list of small lines following a bezier curve.
-			else {
+			else if contour_point_index + 2 < contour_points.len() {
 				let control_point:ContourPoint = end_point;
 				let end_point:ContourPoint = contour_points[contour_point_index + 2];
 				output_list.extend(Self::bezier_to_lines(start_point, control_point, end_point, scale));
 				contour_point_index += 2;
+			}
+
+			// Something went wrong, break.
+			else {
+				break;
 			}
 		}
 	}
@@ -486,12 +491,13 @@ impl Font {
 	}
 
 	/// Create a pixel-grid from a list of lines.
-	fn outlines_to_pixels(line_height:usize, outline_lines:&[Line]) -> Grid<bool> {
-		let mut pixel_grid:Grid<bool> = Grid::new(vec![false; line_height * line_height], line_height, line_height);
+	fn outlines_to_pixels(line_height:usize, outline_lines:&[Line]) -> Grid<f32> {
+		let mut pixel_grid:Grid<f32> = Grid::new(vec![0.0; line_height * line_height], line_height, line_height);
 
 		// Loop through rows in the bitmap.
 		for pixel_row in 0..line_height {
 			let scanline_y:f32 = pixel_row as f32 + 0.5; // The center of the pixel-row.
+			let pixel_y:usize = line_height - pixel_row - 1;
 
 			// For each outline that intersects the scanline, find the X coordinate of the intersection.
 			let mut intersection_x_positions:Vec<f32> = Vec::new();
@@ -518,14 +524,19 @@ impl Font {
 				if intersection_pair.len() != 2 {
 					continue;
 				}
+
+				// Completely fill all pixels between intersections.
 				let fill_start_x:isize = intersection_pair[0].floor() as isize;
 				let fill_end_x:isize   = intersection_pair[1].ceil()  as isize;
 				for pixel_x in fill_start_x..fill_end_x {
 					if pixel_x >= 0 && pixel_x < line_height as isize {
-						let pixel_y:usize = line_height - pixel_row - 1;
-						pixel_grid[[pixel_x as usize, pixel_y]] = true;
+						pixel_grid[[pixel_x as usize, pixel_y]] = 1.0;
 					}
 				}
+
+				// Set correct weights for edges.
+				pixel_grid[[fill_start_x as usize, pixel_y]] = 1.0 - (intersection_pair[0] % 1.0);
+				pixel_grid[[fill_end_x as usize - 1, pixel_y]] = intersection_pair[1] % 1.0;
 			}
 		}
 
@@ -536,15 +547,28 @@ impl Font {
 
 
 
-impl Grid<bool> {
+impl Grid<f32> {
 
 	/// Paint a character in a grid.
-	pub fn draw_char(character:char, font:&Font, line_height:usize) -> Grid<bool> {
+	pub fn draw_char(character:char, font:&Font, line_height:usize) -> Grid<f32> {
 		font.draw_char(character, line_height)
 	}
 
 	/// Paint a text in a grid.
-	pub fn draw_str(str:&str, font:&Font, line_height:usize) -> Grid<Grid<bool>> {
+	pub fn draw_str(str:&str, font:&Font, line_height:usize) -> Grid<Grid<f32>> {
 		font.draw_str(str, line_height)
+	}
+}
+impl Grid<bool> {
+	const PIXEL_AMOUNT_THRESHOLD:f32 = 0.25;
+
+	/// Paint a character in a grid.
+	pub fn draw_char(character:char, font:&Font, line_height:usize) -> Grid<bool> {
+		font.draw_char(character, line_height).map(|value| value > Grid::<bool>::PIXEL_AMOUNT_THRESHOLD)
+	}
+
+	/// Paint a text in a grid.
+	pub fn draw_str(str:&str, font:&Font, line_height:usize) -> Grid<Grid<bool>> {
+		font.draw_str(str, line_height).map(|grid| grid.map(|value| value > Grid::<bool>::PIXEL_AMOUNT_THRESHOLD))
 	}
 }
