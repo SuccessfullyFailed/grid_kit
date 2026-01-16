@@ -65,12 +65,7 @@ impl Default for Transform {
 pub struct Font {
 	units_per_em:u16,
 	encoders:Vec<Box<dyn FontEncoder>>,
-	contours:Vec<(usize, [i16; 4], Vec<Vec<ContourPoint>>)>,
-	ascender:i16,
-	descender:i16,
-	line_gap:i16,
-	advance_widths:Vec<u16>,
-	left_side_bearings:Vec<i16>
+	contours:Vec<(usize, [i16; 4], Vec<Vec<ContourPoint>>)>
 }
 impl Font {
 
@@ -105,25 +100,15 @@ impl Font {
 			table_parsers.push((tag, table_address, BytesParser::new(file_contents[table_address..table_address + table_size].to_vec(), true)));
 		}
 
-		// Prepare variables to be set during the parsing.
+		// Parse tables in prefered order.
+		const TABLE_PARSE_ORDER:&[&str] = &["head", "maxp", "loca", "cmap", "glyf"];
 		let mut loca_format:u16 = 0;
 		let mut glyph_count:u16 = 0;
 		let mut units_per_em:u16 = 0;
-
-		let mut ascender:i16 = 0;
-		let mut descender:i16 = 0;
-		let mut line_gap:i16 = 0;
-		let mut hmetric_count:u16 = 0;
-		let mut advance_widths:Vec<u16> = Vec::new();
-		let mut left_side_bearings:Vec<i16> = Vec::new();
-
 		let mut glyph_offsets:Vec<usize> = Vec::new();
 		let mut encoders:Vec<Box<dyn FontEncoder>> = Vec::new();
 		let mut contours:Vec<(usize, [i16; 4], Vec<Vec<ContourPoint>>)> = Vec::new();
 		let mut composites:Vec<(usize, Vec<(usize, Transform)>)> = Vec::new();
-		
-		// Parse tables in prefered order.
-		const TABLE_PARSE_ORDER:&[&str] = &["head", "maxp", "loca", "cmap", "glyf", "hhea", "hmtx"];
 		for target_tag in TABLE_PARSE_ORDER {
 			for (_, table_address, table_parser) in table_parsers.iter_mut().filter(|(tag, _, _)| tag == target_tag) {
 				match *target_tag {
@@ -350,35 +335,6 @@ impl Font {
 							}
 						}
 					}
-					"hhea" => {
-						table_parser.skip(4);
-						ascender = table_parser.take()?;
-						descender = table_parser.take()?;
-						line_gap = table_parser.take()?;
-						table_parser.skip(12 * 2);
-						hmetric_count = table_parser.take()?;
-					},
-					"hmtx" => {
-						if hmetric_count == 0 {
-							continue;
-						}
-
-						// Read full metrics.
-						for _ in 0..hmetric_count {
-							advance_widths.push(parser.take()?);
-							left_side_bearings.push(parser.take()?);
-						}
-
-						// Reuse last advance width.
-						let last_advance_width:u16 = *advance_widths.last().unwrap();
-
-						// Read remaining left-side-bearings.
-						for _ in hmetric_count..glyph_count {
-							let left_side_bearing:i16 = parser.take()?;
-							advance_widths.push(last_advance_width);
-							left_side_bearings.push(left_side_bearing);
-						}
-					},
 					_ => {}
 				}
 			}
@@ -411,12 +367,7 @@ impl Font {
 			Font {
 				units_per_em,
 				encoders,
-				contours,
-				ascender,
-				descender,
-				line_gap,
-				advance_widths,
-				left_side_bearings
+				contours
 			}
 		)
 	}
@@ -431,45 +382,47 @@ impl Font {
 		let scale:f32 = line_height as f32 / self.units_per_em as f32;
 
 		// Collect contours for each character to draw.
-		let mut to_draw:Vec<([i16; 2], &Vec<Vec<ContourPoint>>)> = Vec::new();
+		let mut to_draw:Vec<([i16; 4], &Vec<Vec<ContourPoint>>)> = Vec::new();
 		let mut cursor:[i16; 2] = [0, 0];
-		let mut outer_bounds:[i16; 2] = [0, 0];
+		let mut outer_bounds:[i16; 4] = [0, 0, 0, 0];
 		for line in lines {
 			cursor[0] = 0;
-			let end_y:i16 = cursor[1] + self.ascender;
-			let baseline_y:i16 = cursor[1] + self.ascender;
 			for character in line {
 
 				// Get contours for character.
 				if let Some(glyph_id) = self.encoders.iter().find_map(|e| e.glyph_id_for_char(character)) {
 					let glyph_id:usize = glyph_id as usize;
-					if let Some((_, _bounds, contours)) = self.contours.iter().find(|(id, _, _)| *id == glyph_id) {
-						let start_x:i16 = cursor[0] + *self.left_side_bearings.get(glyph_id as usize).unwrap_or(&0);
-						let end_x:i16 = cursor[0] + *self.advance_widths.get(glyph_id as usize).unwrap_or(&0) as i16;
-						if end_x > outer_bounds[0] { outer_bounds[0] = end_x; }
-						if end_y > outer_bounds[1] { outer_bounds[1] = end_y; }
+					if let Some((_, bounds, contours)) = self.contours.iter().find(|(id, _, _)| *id == glyph_id) {
+						let start_x:i16 = cursor[0] + bounds[0];
+						let start_y:i16 = cursor[1] + bounds[1];
+						let end_x:i16 = start_x + bounds[2];
+						let end_y:i16 = start_y + bounds[3];
+						if start_x < outer_bounds[0] { outer_bounds[0] = start_x; }
+						if start_y < outer_bounds[1] { outer_bounds[1] = start_y; }
+						if end_x > outer_bounds[2] { outer_bounds[2] = end_x; }
+						if end_y > outer_bounds[3] { outer_bounds[3] = end_y; }
 
-						to_draw.push(([start_x, baseline_y], contours));
-						println!("{} -> gid {} aw {:?}", character, glyph_id, self.advance_widths.get(glyph_id as usize));
-
-						cursor[0] += *self.advance_widths.get(glyph_id as usize).unwrap_or(&0) as i16;
+						to_draw.push(([start_x, start_y, start_x + bounds[2], start_y + bounds[3]], contours));
+						cursor[0] = end_x;
 					}
 				}
 			}
-			cursor[1] += self.ascender - self.descender + self.line_gap;
+			cursor[1] += self.units_per_em as i16;
 		}
 		if to_draw.is_empty() {
 			return Grid::default();
 		}
 
 		// Create a buffer that can contain all characters.
-		let buffer_width:usize = (outer_bounds[0] as f32 * scale) as usize;
-		let buffer_height:usize = (outer_bounds[1] as f32 * scale) as usize;
+		let buffer_width:usize = ((outer_bounds[2] - outer_bounds[0]) as f32 * scale) as usize;
+		let buffer_height:usize = ((outer_bounds[3] - outer_bounds[1]) as f32 * scale) as usize;
 		let mut buffer:Grid<f32> = Grid::new(vec![0.0; buffer_width * buffer_height], buffer_width, buffer_height);
+		println!("{}x{}", buffer_width, buffer_height);
 
 		// Draw each character from the collected list.
-		for (position, contours) in to_draw {
-			let position:[i16; 2] = position.map(|value| (value as f32 * scale) as i16);
+		for (bounds, contours) in to_draw {
+			let bounds:[i16; 4] = bounds.map(|value| (value as f32 * scale) as i16);
+			println!("{:?}", bounds);
 
 			// Create a list of lines from the contours.
 			let mut lines:Vec<Line> = Vec::new();
@@ -478,7 +431,7 @@ impl Font {
 			}
 
 			// Fill the outlines, drawing the character on the buffer.
-			Self::outlines_to_pixels(line_height, &lines, &mut buffer, position);
+			Self::outlines_to_pixels(line_height, &lines, &mut buffer, bounds);
 		}
 
 		// Return the drawn buffer.
@@ -560,12 +513,12 @@ impl Font {
 	}
 
 	/// Rasterize a glyph from the given lines on the given buffer.
-	fn outlines_to_pixels(line_height:usize, outline_lines:&[Line], pixel_grid:&mut Grid<f32>, position:[i16; 2]) {
+	fn outlines_to_pixels(line_height:usize, outline_lines:&[Line], pixel_grid:&mut Grid<f32>, bounds:[i16; 4]) {
 
 		// Loop through rows in the bitmap.
-		for pixel_row in 0..line_height {
+		for pixel_row in 0..bounds[3] {
 			let scanline_y:f32 = pixel_row as f32 + 0.5; // The center of the pixel-row.
-			let pixel_y:i16 = (line_height - pixel_row - 1) as i16 + position[1];
+			let pixel_y:i16 = line_height as i16 - pixel_row - 1 + bounds[1];
 			if pixel_y < 0 || pixel_y as usize >= pixel_grid.height {
 				continue;
 			}
@@ -596,7 +549,7 @@ impl Font {
 				if intersection_pair.len() != 2 {
 					continue;
 				}
-				let intersection_pair:[f32; 2] = [intersection_pair[0] + position[0] as f32, intersection_pair[1] + position[0] as f32];
+				let intersection_pair:[f32; 2] = [intersection_pair[0] + bounds[0] as f32, intersection_pair[1] + bounds[0] as f32];
 
 				// Completely fill all pixels between intersections.
 				let fill_start_x:isize = intersection_pair[0].floor() as isize;
@@ -645,7 +598,7 @@ impl Grid<bool> {
 fn test() {
 	let font:Font = Font::new(r#"D:\Fonts\Gothic\newton_howard\Newton Howard Font Italic.ttf"#).unwrap();
 	let str_to_render:String = format!("Abg\nThe Quick Brown Fox\n{:?}", std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH).unwrap().as_millis() % 1000);
-	println!("\n\n{str_to_render}");
+	println!("{str_to_render}");
 	let text:Grid<f32> = Grid::<f32>::draw_str(&str_to_render, &font, 50);
 	text.map(|value| (value  * 255.0) as u8).to_bmp("target/font_test.bmp").unwrap();
 }
