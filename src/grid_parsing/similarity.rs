@@ -267,7 +267,6 @@ impl<T> Grid<T> where T:PartialEq {
 		}
 
 		// Initialize variables used in the loop.
-		let mask_grid:&Grid<bool> = mask.grid();
 		let self_row_shift:usize = self.width - sub_grid.width;
 		let end_x:usize = self.width - sub_grid.width + 1;
 		let end_y:usize = self.height - sub_grid.height + 1;
@@ -281,7 +280,7 @@ impl<T> Grid<T> where T:PartialEq {
 		// Loop through all possible top-left positions.
 		while origin_y < end_y {
 			while origin_x < end_x {
-				if self.find_at_position_masked(sub_grid, mask_grid, max_allowed_mismatches, [origin_x, origin_y], self_row_shift) {
+				if self.find_at_position_masked(sub_grid, mask, max_allowed_mismatches, [origin_x, origin_y], self_row_shift) {
 					return Some([origin_x, origin_y]);
 				}
 				origin_x += 1;
@@ -295,22 +294,20 @@ impl<T> Grid<T> where T:PartialEq {
 	}
 
 	/// Check if a sub-grid is at a specific position in self. Only count pixels matching the mask.
-	fn find_at_position_masked(&self, sub_grid:&Grid<T>, mask_grid:&Grid<bool>, max_allowed_mismatches:usize, position:[usize; 2], self_row_shift:usize) -> bool {
+	fn find_at_position_masked(&self, sub_grid:&Grid<T>, mask:&GridMask, max_allowed_mismatches:usize, position:[usize; 2], self_row_shift:usize) -> bool {
 		let mut mismatches:usize = 0;
-		let mut self_index:usize = position[1] * self.width + position[0];
-		let mut sub_index:usize = 0;
-		for _sub_y in 0..sub_grid.height {
-			for _sub_x in 0..sub_grid.width {
-				if mask_grid[sub_index] && self[self_index] != sub_grid[sub_index] {
+		let self_to_sub_start_offset:usize = position[1] * self.width + position[0];
+		for range in mask.positive_ranges() {
+			for sub_index in range.clone() {
+				let sub_y:usize = sub_index / sub_grid.width;
+				let self_index:usize = self_to_sub_start_offset + sub_y * self_row_shift + sub_index;
+				if self[self_index] != sub_grid[sub_index] {
 					mismatches += 1;
 					if mismatches > max_allowed_mismatches {
 						return false;
 					}
 				}
-				self_index += 1;
-				sub_index += 1;
 			}
-			self_index += self_row_shift;
 		}
 		return true;
 	}
