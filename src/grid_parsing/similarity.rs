@@ -214,7 +214,6 @@ impl<T> Grid<T> where T:PartialEq {
 
 	/// Check if a sub-grid is at a specific position in self.
 	fn find_at_position(&self, sub_grid:&Grid<T>, max_allowed_mismatches:usize, position:[usize; 2], self_row_shift:usize) -> bool {
-
 		let mut mismatches:usize = 0;
 		let mut self_index:usize = position[1] * self.width + position[0];
 		let mut sub_index:usize = 0;
@@ -240,14 +239,14 @@ impl<T> Grid<T> where T:PartialEq {
 
 	/// Find the given sub-grid in self. Returns the topleft coordinates of the first position where the similarity reaches the given threshold, only matching the positive pixels of the given mask.
 	pub fn find_masked(&self, sub_grid:&Grid<T>, mask:&GridMask, similarity_threshold_factor:f32) -> Option<[usize; 2]> {
-		let comparing_pixel_count:usize = sub_grid.width * sub_grid.height;
+		let comparing_pixel_count:usize = mask.positive_ranges().iter().map(|range| range.end - range.start).sum();
 		let max_mismatches:usize = ((1.0 - similarity_threshold_factor) * comparing_pixel_count as f32).round() as usize;
 		self.find_starting_at_position_masked(sub_grid, mask, max_mismatches, [0, 0])
 	}
 
 	/// Find all instances of the given sub-grid in self. Returns the topleft coordinates of the all positions where the similarity reaches the given threshold, only matching the positive pixels of the given mask.
 	pub fn find_all_masked(&self, sub_grid:&Grid<T>, mask:&GridMask, similarity_threshold_factor:f32) -> Vec<[usize; 2]> {
-		let comparing_pixel_count:usize = sub_grid.width * sub_grid.height;
+		let comparing_pixel_count:usize = mask.positive_ranges().iter().map(|range| range.end - range.start).sum();
 		let max_mismatches:usize = ((1.0 - similarity_threshold_factor) * comparing_pixel_count as f32).round() as usize;
 		let mut cursor:[usize; 2] = [0, 0];
 		let mut results:Vec<[usize; 2]> = Vec::new();
