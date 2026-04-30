@@ -179,22 +179,35 @@ impl Font {
 
 		// Estimate the width and height of the grid.
 		let mut total_width:usize = 0;
-		let mut glyph_indices:Vec<usize> = Vec::new();
+		let total_height:usize = height + ((text.split('\n').count() - 1) * line_height);
+		let mut cursor_x:usize = 0;
+		let mut glyph_indices:Vec<(char, usize)> = Vec::new();
 		for character in text.chars() {
-			let glyph_index:usize = self.index_for_character(character);
-			glyph_indices.push(glyph_index);
-
-			let advance_width:u16 = self.hmtx.metrics[glyph_index].advance_width;
-			total_width += (advance_width as f32 * scale) as usize;
+			if character == '\n' {
+				cursor_x = 0;
+				total_width += line_height;
+				glyph_indices.push((character, 0));
+			} else {
+				let glyph_index:usize = self.index_for_character(character);
+				glyph_indices.push((character, glyph_index));
+				cursor_x += (self.hmtx.metrics[glyph_index].advance_width as f32 * scale) as usize;
+				if cursor_x > total_width {
+					total_width = cursor_x;
+				}
+			}
 		}
 
 		// Draw all glyphs onto the grid.
-		let mut grid:Grid<f32> = Grid::new(vec![0.0; total_width * height], total_width, height);
-		let mut cursor_x:usize = 0;
-		for glyph_index in &glyph_indices {
-			let lines:Vec<Line> = self.build_glyph_lines(*glyph_index, scale);
-			self.draw_lines_on_canvas(&lines, &mut grid, cursor_x as i32, ascent as i32);
-			cursor_x += (self.hmtx.metrics[*glyph_index].advance_width as f32 * scale) as usize;
+		let mut grid:Grid<f32> = Grid::new(vec![0.0; total_width * total_height], total_width, total_height);
+		let mut cursor:[i32; 2] = [0, ascent as i32];
+		for (character, glyph_index) in &glyph_indices {
+			if *character == '\n' {
+				cursor = [0, cursor[1] + line_height as i32];
+			} else {
+				let lines:Vec<Line> = self.build_glyph_lines(*glyph_index, scale);
+				self.draw_lines_on_canvas(&lines, &mut grid, cursor[0], cursor[1]);
+				cursor[0] += (self.hmtx.metrics[*glyph_index].advance_width as f32 * scale) as i32;
+			}
 		}
 
 		// Return the created grid.
