@@ -14,7 +14,7 @@ impl Grid<f32> {
 
 	/// Paint a text in a grid.
 	pub fn draw_str(text:&str, font:&Font, line_height:usize) -> Grid<f32> {
-		font.render_text_grid(text, line_height)
+		font.render_text_grid(text, line_height).map(|v| if v { 1.0 } else { 0.0 })
 	}
 }
 impl Grid<bool> {
@@ -171,7 +171,7 @@ impl Font {
 	/* USAGE METHODS */
 
 	/// Create a grid where each pixel is the opacity of the text at that position.
-	pub fn render_text_grid(&self, text:&str, line_height:usize) -> Grid<f32> {
+	pub fn render_text_grid(&self, text:&str, line_height:usize) -> Grid<bool> {
 		let scale:f32 = line_height as f32 / self.head.units_per_em as f32;
 		let ascent:i32 = (self.hhea.ascent as f32 * scale) as i32;
 		let descent:i32 = (self.hhea.descent as f32 * scale) as i32;
@@ -198,7 +198,7 @@ impl Font {
 		}
 
 		// Draw all glyphs onto the grid.
-		let mut grid:Grid<f32> = Grid::new(vec![0.0; total_width * total_height], total_width, total_height);
+		let mut grid:Grid<bool> = Grid::new(vec![false; total_width * total_height], total_width, total_height);
 		let mut cursor:[i32; 2] = [0, ascent as i32];
 		for (character, glyph_index) in &glyph_indices {
 			if *character == '\n' {
@@ -264,7 +264,7 @@ impl Font {
 	}
 
 	/// Draw the given lines on the given canvas.
-	fn draw_lines_on_canvas(&self, lines:&[Line], canvas:&mut Grid<f32>, offset_x:i32, baseline:i32) {
+	fn draw_lines_on_canvas(&self, lines:&[Line], canvas:&mut Grid<bool>, offset_x:i32, baseline:i32) {
 		let width:i32 = canvas.width as i32;
 		let height:i32 = canvas.height as i32;
 		for cursor_y in 0..height {
@@ -272,7 +272,7 @@ impl Font {
 				let glyph_x:i32 = cursor_x - offset_x;
 				let glyph_y:i32 = baseline - cursor_y;
 				if self.point_is_in_shape(glyph_x as f32, glyph_y as f32, lines) {
-					canvas[(cursor_x as usize, cursor_y as usize)] = 1.0;
+					canvas[(cursor_x as usize, cursor_y as usize)] = true;
 				}
 			}
 		}
