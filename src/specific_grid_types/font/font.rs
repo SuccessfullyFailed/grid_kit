@@ -10,18 +10,12 @@ type Line = [(f32, f32); 2];
 
 
 
-impl Grid<f32> {
+impl<T:FontRenderable> Grid<T> {
 
-	/// Paint a text in a grid.
-	pub fn draw_str(text:&str, font:&Font, line_height:usize) -> Grid<f32> {
-		font.render_text_grid(text, line_height).map(|v| if v { 1.0 } else { 0.0 })
-	}
-}
-impl Grid<bool> {
-
-	/// Paint a text in a grid.
-	pub fn draw_str(str:&str, font:&Font, line_height:usize) -> Grid<bool> {
-		Grid::<f32>::draw_str(str, font, line_height).map(|value| value > 0.25)
+	/// Create a grid that contains the given text.
+	/// Grid will automatically be sized to the correct size to contain all text.
+	pub fn draw_str(text:&str, font:&Font, line_height:usize) -> Grid<T> {
+		font.render_text_grid(text, line_height)
 	}
 }
 
@@ -171,7 +165,7 @@ impl Font {
 	/* USAGE METHODS */
 
 	/// Create a grid where each pixel is the opacity of the text at that position.
-	pub fn render_text_grid(&self, text:&str, line_height:usize) -> Grid<bool> {
+	pub fn render_text_grid<WeightType:FontRenderable>(&self, text:&str, line_height:usize) -> Grid<WeightType> {
 		let scale:f32 = line_height as f32 / self.head.units_per_em as f32;
 		let ascent:i32 = (self.hhea.ascent as f32 * scale) as i32;
 		let descent:i32 = (self.hhea.descent as f32 * scale) as i32;
@@ -198,7 +192,7 @@ impl Font {
 		}
 
 		// Draw all glyphs onto the grid.
-		let mut grid:Grid<bool> = Grid::new(vec![false; total_width * total_height], total_width, total_height);
+		let mut grid:Grid<WeightType> = Grid::new(vec![WeightType::default(); total_width * total_height], total_width, total_height);
 		let mut cursor:[i32; 2] = [0, ascent as i32];
 		for (character, glyph_index) in &glyph_indices {
 			if *character == '\n' {
@@ -228,7 +222,7 @@ impl Font {
 
 	/// Get the lines necessary to draw the glyph of the given index.
 	/// The lines are scaled to the given scale.
-	fn build_glyph_lines(&self, glyph_index: usize, scale:f32) -> Vec<Line> {
+	fn build_glyph_lines(&self, glyph_index:usize, scale:f32) -> Vec<Line> {
 		let mut lines:Vec<Line> = Vec::new();
 
 		// If this glyph is a simple glyph, simply collect and scale all required lines to the lines list.
@@ -264,16 +258,14 @@ impl Font {
 	}
 
 	/// Draw the given lines on the given canvas.
-	fn draw_lines_on_canvas(&self, lines:&[Line], canvas:&mut Grid<bool>, offset_x:i32, baseline:i32) {
+	fn draw_lines_on_canvas<WeightType:FontRenderable>(&self, lines:&[Line], canvas:&mut Grid<WeightType>, offset_x:i32, baseline:i32) {
 		let width:i32 = canvas.width as i32;
 		let height:i32 = canvas.height as i32;
 		for cursor_y in 0..height {
 			for cursor_x in 0..width {
 				let glyph_x:i32 = cursor_x - offset_x;
 				let glyph_y:i32 = baseline - cursor_y;
-				if self.point_is_in_shape(glyph_x as f32, glyph_y as f32, lines) {
-					canvas[(cursor_x as usize, cursor_y as usize)] = true;
-				}
+				WeightType::pixel_weight_renderer(self, [glyph_x, glyph_y], lines, &mut canvas[(cursor_x as usize, cursor_y as usize)]);
 			}
 		}
 	}
@@ -283,7 +275,9 @@ impl Font {
 	/// 	Loop over each each line.
 	/// 	Count the amount of lines overlap the line from the cursor directly to the left.
 	/// 	If the amount of crossed lines is an odd number, we are currently inside the shape.
-	fn point_is_in_shape(&self, cursor_x:f32, cursor_y:f32, lines:&[Line]) -> bool {
+	fn point_is_in_shape(&self, coord:[i32; 2], lines:&[Line]) -> bool {
+		let cursor_x:f32 = coord[0] as f32;
+		let cursor_y:f32 = coord[1] as f32;
 		let mut line_crossings:usize = 0;
 		for line in lines {
 			let (a_x, a_y) = line[0];
@@ -329,5 +323,25 @@ impl TryInto<Font> for &str {
 	type Error = Box<dyn Error>;
 	fn try_into(self) -> Result<Font, Self::Error> {
 		FileRef::new(&self).try_into()
+	}
+}
+
+
+
+pub trait FontRenderable:Default + Clone {
+	fn pixel_weight_renderer(font:&Font, coord:[i32; 2], lines:&[Line], grid_field:&mut Self);
+}
+impl FontRenderable for bool {
+	fn pixel_weight_renderer(font:&Font, coord:[i32; 2], lines:&[Line], grid_field:&mut Self) {
+		if Font::point_is_in_shape(font, coord, lines) {
+			*grid_field = true;
+		}
+	}
+}
+impl FontRenderable for f32 {
+	fn pixel_weight_renderer(font:&Font, coord:[i32; 2], lines:&[Line], grid_field:&mut Self) {
+		if Font::point_is_in_shape(font, coord, lines) {
+			*grid_field = 1.0;
+		}
 	}
 }
