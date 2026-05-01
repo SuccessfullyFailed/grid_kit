@@ -257,15 +257,35 @@ impl Font {
 		lines
 	}
 
-	/// Draw the given lines on the given canvas.
-	fn draw_lines_on_canvas<WeightType:FontRenderable>(&self, lines:&[Line], canvas:&mut Grid<WeightType>, offset_x:i32, baseline:i32) {
-		let width:i32 = canvas.width as i32;
-		let height:i32 = canvas.height as i32;
-		for cursor_y in 0..height {
-			for cursor_x in 0..width {
+	/// Draw the given lines on the given grid.
+	fn draw_lines_on_canvas<WeightType:FontRenderable>(&self, lines:&[Line], grid:&mut Grid<WeightType>, offset_x:i32, baseline:i32) {
+
+		// Find glyf bounds.
+		let mut min_x:f32 = grid.width as f32;
+		let mut min_y:f32 = grid.height as f32;
+		let mut max_x:f32 = 0.0;
+		let mut max_y:f32 = 0.0;
+		for line in lines {
+			for point in line {
+				let cursor_x:f32 = point.0 + offset_x as f32;
+				let cursor_y:f32 = baseline as f32 - point.1;
+				if cursor_x < min_x { min_x = cursor_x; }
+				if cursor_y < min_y { min_y = cursor_y; }
+				if cursor_x > max_x { max_x = cursor_x; }
+				if cursor_y > max_y { max_y = cursor_y; }
+			}
+		}
+		let min_x:i32 = min_x.max(0.0) as i32;
+		let min_y:i32 = min_y.max(0.0) as i32;
+		let max_x:i32 = (max_x as i32 + 1).min(grid.width as i32).max(min_x);
+		let max_y:i32 = (max_y as i32 + 1).min(grid.height as i32).max(min_y);
+
+		// Draw glyf on grid.
+		for cursor_y in min_y..max_y {
+			for cursor_x in min_x..max_x {
 				let glyph_x:i32 = cursor_x - offset_x;
 				let glyph_y:i32 = baseline - cursor_y;
-				WeightType::pixel_weight_renderer(self, [glyph_x, glyph_y], lines, &mut canvas[(cursor_x as usize, cursor_y as usize)]);
+				WeightType::pixel_weight_renderer(self, [glyph_x, glyph_y], lines, &mut grid[(cursor_x as usize, cursor_y as usize)]);
 			}
 		}
 	}
