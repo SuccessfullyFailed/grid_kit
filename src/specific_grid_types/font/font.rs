@@ -162,7 +162,7 @@ impl Font {
 
 
 
-	/* USAGE METHODS */
+	/* RENDERING METHODS */
 
 	/// Create a grid where each pixel is the opacity of the text at that position.
 	pub fn render_text_grid<WeightType:FontRenderable>(&self, text:&str, line_height:usize) -> Grid<WeightType> {
@@ -289,33 +289,98 @@ impl Font {
 			}
 		}
 	}
+
+
+
+	/* WEIGHT CALCULATION METHODS */
 	
 	/// Wether or not the given point is in the shape defined by the given lines.
 	/// Instead of checking if the coordinate is "on" the line, does the following:
 	/// 	Loop over each each line.
 	/// 	Count the amount of lines overlap the line from the cursor directly to the left.
 	/// 	If the amount of crossed lines is an odd number, we are currently inside the shape.
-	fn point_is_in_shape(&self, coord:[i32; 2], lines:&[Line]) -> bool {
+	fn point_is_in_shape(coord:[i32; 2], lines:&[Line]) -> bool {
 		let cursor_x:f32 = coord[0] as f32;
 		let cursor_y:f32 = coord[1] as f32;
 		let mut line_crossings:usize = 0;
 		for line in lines {
-			let (a_x, a_y) = line[0];
-			let (b_x, b_y) = line[1];
-			
-			let y_overlaps:bool = (a_y > cursor_y) != (b_y > cursor_y); // Either of the ends is above/below the point and the other is on the opposite side of it.
-			
-			let cursor_y_offset_from_a:f32 = cursor_y - a_y;
-			let line_end_offset_y:f32 = b_y - a_y;
-			let y_progress_factor:f32 = cursor_y_offset_from_a / line_end_offset_y;
-			let intesection_edge_x:f32 = a_x + (b_x - a_x) * y_progress_factor;
-			let to_left_of_edge:bool = cursor_x < intesection_edge_x;
-
-			if y_overlaps && to_left_of_edge {
-				line_crossings += 1;
+			if Self::y_overlaps_line(cursor_y, line) {
+				let intesection_edge_x:f32 = Self::intersection_edge_x(cursor_y, line);
+				let cursor_to_left_of_edge:bool = cursor_x < intesection_edge_x;
+				if cursor_to_left_of_edge {
+					line_crossings += 1;
+				}
 			}
 		}
 		line_crossings % 2 == 1
+	}
+
+	/// Get the amount of coverage the given pixel has.
+	/// Gets the average coverage of the pixel with multiple slightly shifted Y-coordinates.
+	fn pixel_coverage_from_lines(coord:[i32; 2], lines:&[Line]) -> f32 {
+		const SAMPLES_PER_ROW:i32 = 4;
+
+		// Get the coverage for the pixel with multiple slightly-shifted Y coordinates.
+		let cursor_x:f32 = coord[0] as f32;
+		let mut total_coord_coverage:f32 = 0.0;
+		for y_shift_index in 0..SAMPLES_PER_ROW {
+			let cursor_y:f32 = coord[1] as f32 + (y_shift_index as f32 + 0.5) / SAMPLES_PER_ROW as f32;
+			let intersections_x:Vec<f32> = Self::scanline_intersections(cursor_y, lines);
+
+			// Get the amount of coverage for the given pixel.
+			let next_pixel_x:f32 = cursor_x + 1.0;
+			let mut coverage:f32 = 0.0;
+			for intersection_pair in intersections_x.chunks(2) {
+				if intersection_pair.len() >= 2 {
+					let intersection_start:f32 = intersection_pair[0];
+					let intersection_end:f32 = intersection_pair[1];
+					let overlap_left:f32 = intersection_start.max(cursor_x);
+					let overlap_right:f32 = intersection_end.min(next_pixel_x);
+					if overlap_right > overlap_left {
+						coverage += overlap_right - overlap_left;
+					}
+				}
+			}
+
+			// Add the coverage of this y-shift to the total.
+			total_coord_coverage += coverage.clamp(0.0, 1.0);
+		}
+		total_coord_coverage / SAMPLES_PER_ROW as f32
+	}
+
+
+
+	/* LINE INTERSECTION METHODS */
+
+	/// Wether or not the line overlaps the cursor over the Y axis.
+	fn y_overlaps_line(cursor_y:f32, line:&Line) -> bool {
+		(line[0].1 > cursor_y) != (line[1].1 > cursor_y)
+	}
+
+	/// Find the X coordinate at the edge of the line where cursor_y intersects.
+	/// Assumes cursor_y does intersect with this line.
+	fn intersection_edge_x(cursor_y:f32, line:&Line) -> f32 {
+		let (a_x, a_y) = line[0];
+		let (b_x, b_y) = line[1];
+		
+		let offset_cursor_y_to_a_y:f32 = cursor_y - a_y;
+		let offset_a_y_to_b_y:f32 = b_y - a_y;
+		let cursor_progress_factor:f32 = offset_cursor_y_to_a_y / offset_a_y_to_b_y;
+		let intesection_edge_x:f32 = a_x + (b_x - a_x) * cursor_progress_factor;
+		intesection_edge_x
+	}
+
+	/// Find the X coordinate of all intersections along the given scanline.
+	/// Returns X coordinates sorted from small to large.
+	fn scanline_intersections(scanline_y:f32, lines: &[Line]) -> Vec<f32> {
+		let mut x_coordinates:Vec<f32> = Vec::new();
+		for line in lines {
+			if Self::y_overlaps_line(scanline_y, line) {
+				x_coordinates.push(Self::intersection_edge_x(scanline_y, line));
+			}
+		}
+		x_coordinates.sort_by(|a, b| a.partial_cmp(b).unwrap());
+		x_coordinates
 	}
 }
 
@@ -352,16 +417,14 @@ pub trait FontRenderable:Default + Clone {
 	fn pixel_weight_renderer(font:&Font, coord:[i32; 2], lines:&[Line], grid_field:&mut Self);
 }
 impl FontRenderable for bool {
-	fn pixel_weight_renderer(font:&Font, coord:[i32; 2], lines:&[Line], grid_field:&mut Self) {
-		if Font::point_is_in_shape(font, coord, lines) {
+	fn pixel_weight_renderer(_font:&Font, coord:[i32; 2], lines:&[Line], grid_field:&mut Self) {
+		if Font::point_is_in_shape(coord, lines) {
 			*grid_field = true;
 		}
 	}
 }
 impl FontRenderable for f32 {
-	fn pixel_weight_renderer(font:&Font, coord:[i32; 2], lines:&[Line], grid_field:&mut Self) {
-		if Font::point_is_in_shape(font, coord, lines) {
-			*grid_field = 1.0;
-		}
+	fn pixel_weight_renderer(_font:&Font, coord:[i32; 2], lines:&[Line], grid_field:&mut Self) {
+		*grid_field +=Font::pixel_coverage_from_lines(coord, lines);
 	}
 }
