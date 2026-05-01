@@ -179,7 +179,6 @@ impl Font {
 		for character in text.chars() {
 			if character == '\n' {
 				cursor_x = 0;
-				total_width += line_height;
 				glyph_indices.push((character, 0));
 			} else {
 				let glyph_index:usize = self.index_for_character(character);
