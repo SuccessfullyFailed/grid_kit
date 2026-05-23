@@ -1,11 +1,14 @@
 mod grid;
 mod grid_u;
+mod grid_cursor;
+mod grid_cursor_u;
 mod grid_behavior;
 mod grid_parsing;
 mod storage;
 mod specific_grid_types;
 
 pub use grid::*;
+pub use grid_cursor::*;
 pub use grid_behavior::*;
 pub use grid_parsing::*;
 pub use storage::*;
