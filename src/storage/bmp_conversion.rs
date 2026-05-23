@@ -1,4 +1,4 @@
-use crate::{ Color, ColorConvertible, Grid, ImageConversion };
+use crate::{ Color, Grid, ImageConversion };
 use std::{ error::Error, fs, path::Path };
 use bytes_parser::BytesParser;
 
@@ -11,10 +11,10 @@ const BMP_INFO_HEADER_SIZE:u32 = 40;
 
 
 
-impl<T> Grid<T> where T:ColorConvertible {
+impl<T> Grid<T> {
 
 	/// Read a grid from a BMP file.
-	pub fn from_bmp(file_path:&str) -> Result<Grid<T>, Box<dyn Error>> {
+	pub fn from_bmp(file_path:&str) -> Result<Grid<T>, Box<dyn Error>> where T:From<Color> {
 		if !Path::new(file_path).exists() {
 			return Err("File does not exist.".into());
 		}
@@ -22,13 +22,13 @@ impl<T> Grid<T> where T:ColorConvertible {
 	}
 
 	/// Store the grid as a BMP file.
-	pub fn to_bmp(&self, file_path:&str) -> Result<(), Box<dyn Error>> {
+	pub fn to_bmp(&self, file_path:&str) -> Result<(), Box<dyn Error>> where Color:for<'a> From<&'a T> {
 		fs::write(file_path, self.to_bmp_bytes())?;
 		Ok(())
 	}
 
 	/// Read a grid from a BMP bytes list.
-	pub(crate) fn from_bmp_bytes(bytes:Vec<u8>) -> Result<Grid<T>, Box<dyn Error>> {
+	pub(crate) fn from_bmp_bytes(bytes:Vec<u8>) -> Result<Grid<T>, Box<dyn Error>> where T:From<Color> {
 		let mut parser:BytesParser = BytesParser::new(bytes, false);
 
 		// Parse file header.
@@ -94,11 +94,11 @@ impl<T> Grid<T> where T:ColorConvertible {
 		}
 
 		// Return the read data as a grid.
-		Ok(Grid::new(colors.into_iter().flatten().map(|color| T::from_color(color)).collect(), width as usize, height as usize))
+		Ok(Grid::new(colors.into_iter().flatten().map(T::from).collect(), width as usize, height as usize))
 	}
 
 	/// Convert the grid to BMP bytes.
-	pub(crate) fn to_bmp_bytes(&self) -> Vec<u8> {
+	pub(crate) fn to_bmp_bytes(&self) -> Vec<u8> where Color:for<'a> From<&'a T> {
 
 		// Prepare required variables.
 		let full_file_bytes_size:u32 = BMP_FILE_HEADER_SIZE + BMP_INFO_HEADER_SIZE + (self.width * self.height * 4) as u32;
@@ -138,7 +138,7 @@ impl<T> Grid<T> where T:ColorConvertible {
 		];
 
 		// Create the image data.
-		let image_data:Vec<Vec<u8>> = self.data.iter().map(|color| color.to_color()).map(|color| vec![*color.b(), *color.g(), *color.r(), (color.0 >> 24) as u8]).collect();
+		let image_data:Vec<Vec<u8>> = self.data.iter().map(Color::from).map(|color| vec![*color.b(), *color.g(), *color.r(), (color.0 >> 24) as u8]).collect();
 
 		// Full list of bytes.
 		vec![file_info_header, bitmap_info_header, image_data].into_iter().flatten().flatten().collect::<Vec<u8>>()
@@ -155,12 +155,12 @@ impl ImageConversion for BmpConversion {
 	}
 
 	/// Read an image from a file.
-	fn image_from_file<T:ColorConvertible>(path:&str) -> Result<Grid<T>, Box<dyn Error>> {
+	fn image_from_file<T:From<Color>>(path:&str) -> Result<Grid<T>, Box<dyn Error>> {
 		Grid::from_bmp(path)
 	}
 
 	/// Write an image to a file.
-	fn image_to_file<T:ColorConvertible>(image:Grid<T>, path:&str) -> Result<(), Box<dyn Error>> {
+	fn image_to_file<T>(image:&Grid<T>, path:&str) -> Result<(), Box<dyn Error>> where Color:for<'a> From<&'a T> {
 		image.to_bmp(path)
 	}
 }

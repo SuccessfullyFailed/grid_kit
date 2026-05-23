@@ -18,8 +18,8 @@ impl Color {
 	/* CONSTRUCTOR METHODS */
 
 	/// Create a new 0xAARRGGBB color.
-	pub fn new<T>(source:T) -> Color where T:ColorConvertible + Send + Sync + 'static {
-		source.to_color()
+	pub fn new<T:Into<Color> + Send + Sync + 'static>(source:T) -> Color {
+		source.into()
 	}
 
 
@@ -93,11 +93,11 @@ impl Debug for Color {
 		write!(f, "{:#010x}", self.0)
 	}
 }
-impl<T:ColorConvertible> Add<T> for Color {
+impl<T:Into<Color>> Add<T> for Color {
 	type Output = Color;
 
 	fn add(self, rhs:T) -> Self::Output {
-		let rhs:Color  = rhs.to_color();
+		let rhs:Color  = rhs.into();
 
 		// Edge cases that require no merging.
 		let rhs_opacity:u32 = rhs.0 >> 24;
@@ -131,7 +131,7 @@ impl<T:ColorConvertible> Add<T> for Color {
 		)
 	}
 }
-impl<T:ColorConvertible> AddAssign<T> for Color {
+impl<T:Into<Color>> AddAssign<T> for Color {
 	fn add_assign(&mut self, rhs:T) {
 		*self = *self + rhs;
 	}
@@ -139,52 +139,53 @@ impl<T:ColorConvertible> AddAssign<T> for Color {
 
 
 
-pub trait ColorConvertible:Send + Sync + 'static {
+impl From<u32> for Color {
+	fn from(value:u32) -> Self {
+		Color(value)
+	}
+}
+impl From<Color> for u32 {
+	fn from(value:Color) -> Self {
+		value.0
+	}
+}
 
-	/// Convert the value to a 0xAARRGGBB color.
-	fn to_color(&self) -> Color;
+impl From<[u8; 4]> for Color {
+	fn from(value:[u8; 4]) -> Self {
+	    Color::from(u32::from_be_bytes(value))
+	}
+}
+impl From<Color> for [u8; 4] {
+	fn from(value:Color) -> Self {
+		value.0.to_be_bytes()
+	}
+}
 
-	/// Convert from color to self.
-	fn from_color(color:Color) -> Self;
-}
-impl ColorConvertible for Color {
-	fn to_color(&self) -> Color {
-		*self
-	}
-	fn from_color(color:Color) -> Self {
-		color
+impl From<u8> for Color {
+	fn from(value:u8) -> Self {
+		Color::from([0xFF, value, value, value])
 	}
 }
-impl ColorConvertible for u32 {
-	fn to_color(&self) -> Color {
-		Color(*self)
-	}
-	fn from_color(color:Color) -> Self {
-		color.0
+impl From<Color> for u8 {
+	fn from(value:Color) -> Self {
+		value.shade()
 	}
 }
-impl ColorConvertible for u8 {
-	fn to_color(&self) -> Color {
-		Color(u32::from_be_bytes([0xFF, *self, *self, *self]))
-	}
-	fn from_color(color:Color) -> Self {
-		color.shade()
+
+impl From<bool> for Color {
+	fn from(value:bool) -> Self {
+		Color::from(if value { 0xFFFFFFFF_u32 } else { 0x00000000_u32 })
 	}
 }
-impl ColorConvertible for bool {
-	fn to_color(&self) -> Color {
-		Color(if *self { 0xFF00FF00 } else { 0x00000000 })
-	}
-	fn from_color(color:Color) -> Self {
-		color.0 != 0x000000
+impl From<Color> for bool {
+	fn from(value:Color) -> Self {
+		value.0 != 0
 	}
 }
-impl ColorConvertible for [u8; 4] {
-	fn to_color(&self) -> Color {
-		Color(u32::from_be_bytes(*self))
-	}
-	fn from_color(color:Color) -> Self {
-		color.0.to_be_bytes()
+
+impl<'a, T:Copy> From<&'a T> for Color where Color:From<T> {
+	fn from(value:&'a T) -> Self {
+		Color::from(*value)
 	}
 }
 
@@ -196,8 +197,8 @@ pub trait ImageConversion {
 	fn file_extension() -> &'static str;
 
 	/// Read an image from a file.
-	fn image_from_file<T:ColorConvertible>(path:&str) -> Result<Grid<T>, Box<dyn Error>>;
+	fn image_from_file<T:From<Color>>(path:&str) -> Result<Grid<T>, Box<dyn Error>>;
 
 	/// Write an image to a file.
-	fn image_to_file<T:ColorConvertible>(image:Grid<T>, path:&str) -> Result<(), Box<dyn Error>>;
+	fn image_to_file<T>(image:&Grid<T>, path:&str) -> Result<(), Box<dyn Error>> where Color:for<'a> From<&'a T>;
 }

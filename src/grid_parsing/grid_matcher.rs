@@ -1,4 +1,4 @@
-use crate::{ ColorConvertible, Grid, GridByteConvertible, GridMask, ImageConversion };
+use crate::{ Color, Grid, GridByteConvertible, GridMask, ImageConversion };
 use file_ref::FileRef;
 use std::error::Error;
 
@@ -103,13 +103,13 @@ impl<SourceType:PartialEq + Default, TargetType:PartialEq> GridMatcher<SourceTyp
 
 
 
-pub struct CachedGridMatcher<SourceType:PartialEq + Default, TargetType:PartialEq + GridByteConvertible, Converter:ImageConversion> {
+pub struct CachedGridMatcher<SourceType:PartialEq + Default + From<Color>, TargetType:PartialEq + Default + GridByteConvertible, Converter:ImageConversion> {
 	source_dir:FileRef,
 	cache_dir:FileRef,
 	grid_matcher:GridMatcher<SourceType, TargetType>,
 	_converter:Option<Converter>
 }
-impl<SourceType:PartialEq + Default + ColorConvertible, TargetType:PartialEq + GridByteConvertible + Default + ColorConvertible, Converter:ImageConversion> CachedGridMatcher<SourceType, TargetType, Converter> {
+impl<SourceType:PartialEq + Default + From<Color>, TargetType:PartialEq + Default + GridByteConvertible, Converter:ImageConversion> CachedGridMatcher<SourceType, TargetType, Converter> where Color:for<'a> From<&'a TargetType> {
 	const CACHE_DIR_NAME:&str = "_grid_matcher_cache";
 	const CACHE_FILE_EXTENSION:&str = "gmc";
 
@@ -226,7 +226,7 @@ impl<SourceType:PartialEq + Default + ColorConvertible, TargetType:PartialEq + G
 		let cache_file:FileRef = self.cache_for_source(&source);
 		let debug_file:FileRef = self.debug_for_source(&source);
 		filtered_aoi.save_to_file(cache_file.path())?;
-		Converter::image_to_file(filtered_aoi, debug_file.path())?;
+		Converter::image_to_file(&filtered_aoi, debug_file.path())?;
 
 		// Return success.
 		Ok(())
